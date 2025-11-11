@@ -1,0 +1,21 @@
+parameters:
+  level: 7
+  bootstrapFiles:
+    - vendor/autoload.php
+  paths:
+    - src
+    - bin
+    - scripts
+    - config
+  tmpDir: .phpstan.cache
+  parallel:
+    maximumNumberOfProcesses: 4
+  checkGenericClassInNonGenericObjectType: true
+  checkMissingIterableValueType: true
+  treatPhpDocTypesAsCertain: false
+  checkUninitializedProperties: true
+  checkExplicitMixed: true
+  ignoreErrors:
+    - '#Cannot cast mixed to \w+.#'
+    - '#Cannot access offset .+ on mixed.#'
+    - '#Parameter \#1 \$string of function strtolower expects string, mixed given.#'

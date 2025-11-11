@@ -1,0 +1,51 @@
+# Composer & Dependencies
+/vendor/
+composer.lock
+
+# Node
+/node_modules/
+
+# Environment
+/.env
+/.env.testing
+.env.*.local
+
+# IDE & Editors
+/.idea/
+/.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build & Temporary
+/build/
+/dist/
+/tmp/
+
+# Testing & Coverage
+/tests/_output/
+tests/var/
+.phpunit.cache/
+.phpunit.result.cache
+phpunit.xml.cache
+coverage.xml
+phpunit.log
+
+# Static Analysis Cache
+.phpstan.cache/
+.phpcs.cache
+
+# Database Files
+*.sqlite3
+*.sqlite
+var/db/*.sqlite*
+bin/scaffolddb.sqlite*
+
+# Logs
+*.log
+logs/
+

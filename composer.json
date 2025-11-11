@@ -1,0 +1,32 @@
+{
+  "name": "jeysofts/scaffold",
+  "type": "project",
+  "require": {
+    "php": "^8.1",
+    "ext-pdo": "*",
+    "vlucas/phpdotenv": "^5.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/",
+      "App\\Config\\": "config/"
+    }
+  },
+  "scripts": {
+    "start": "php -S 172.0.0.1:8080 -t public",
+    "test": "vendor/bin/phpunit --colors=never",
+    "test:coverage": "vendor/bin/phpunit --colors=never --coverage-clover=coverage.xml && php scripts/check-coverage.php 70 coverage.xml",
+    "lint": "vendor/bin/phpcs --standard=phpcs.xml src bin || true",
+    "migrate": "vendor/bin/phinx migrate -c phinx.php -e development",
+    "migrate:status": "vendor/bin/phinx status -c phinx.php -e development",
+    "log:start": "php bin/log_progress.php start",
+    "log:finish": "php bin/log_progress.php finish",
+    "log:rotate": "php scripts/rotate_logs.php"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.0",
+    "phpstan/phpstan": "^1.12",
+    "squizlabs/php_codesniffer": "^3.7",
+    "robmorgan/phinx": "^0.14.0"
+  }
+}

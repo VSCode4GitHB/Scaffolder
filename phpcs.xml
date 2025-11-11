@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<ruleset name="Project">
+    <description>Project coding standard (PSR-12)</description>
+    
+    <!-- Enable cache -->
+    <arg name="cache" value=".phpcs.cache"/>
+    
+    <!-- Show progress -->
+    <arg value="p"/>
+    
+    <!-- Enable parallel processing -->
+    <arg name="parallel" value="4"/>
+    
+    <!-- Include PSR-12 standard -->
+    <rule ref="PSR12"/>
+    
+    <!-- Paths to check -->
+    <file>src</file>
+    <file>bin</file>
+    <file>config</file>
+    
+    <!-- Exclude patterns -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/tests/*</exclude-pattern>
+    <exclude-pattern>*/.phpstan.cache/*</exclude-pattern>
+    
+    <!-- Memory limit -->
+    <ini name="memory_limit" value="256M"/>
+</ruleset>
