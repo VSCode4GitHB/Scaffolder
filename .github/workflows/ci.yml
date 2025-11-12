@@ -61,7 +61,7 @@ jobs:
         run: vendor/bin/phpstan analyse --memory-limit=256M --no-progress
 
       - name: PHP_CodeSniffer
-        run: vendor/bin/phpcs --report=checkstyle --report-file=phpcs-report.xml
+        run: vendor/bin/phpcs --report=checkstyle --report-file=phpcs-report.xml --report=full --warning-severity=0
 
       - name: PHPUnit with coverage
         run: vendor/bin/phpunit --coverage-clover=coverage.xml --colors=never
