@@ -50,6 +50,8 @@ jobs:
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Update docs timestamp
+        run: composer run docs:update
       - name: Mark CI start in progress journal
         run: |
           composer run log:start -- --id=CI.${{ github.run_id }} --phase="CI" --title="Build ${{ github.workflow }}" --owner="github-actions" --desc="Start CI run ${{ github.run_id }}" --format=jsonl --no-md --out-json="docs/progress_entries.jsonl"

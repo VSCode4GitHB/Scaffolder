@@ -17,6 +17,7 @@
     "test": "vendor/bin/phpunit --colors=never",
     "test:coverage": "vendor/bin/phpunit --colors=never --coverage-clover=coverage.xml && php scripts/check-coverage.php 70 coverage.xml",
     "lint": "vendor/bin/phpcs --standard=phpcs.xml src bin || true",
+    "docs:update": "php scripts/update_readme.php",
     "migrate": "vendor/bin/phinx migrate -c phinx.php -e development",
     "migrate:status": "vendor/bin/phinx status -c phinx.php -e development",
     "log:start": "php bin/log_progress.php start",

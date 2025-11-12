@@ -13,3 +13,44 @@ Démarrage local (Docker)
 2. Lancer l'environnement :
    ```bash
    docker-compose up -d --build
+
+
+Environment et mise en route (rapide)
+
+1. Copier l'exemple d'environnement :
+
+```powershell
+copy .env.example .env
+```
+
+2. Installer les dépendances PHP :
+
+```powershell
+composer install
+```
+
+3. Lancer la stack Docker (optionnel) :
+
+```powershell
+docker-compose up -d --build
+```
+
+4. Exécuter les migrations de test :
+
+```powershell
+vendor\bin\phinx migrate -c phinx.php -e test
+```
+
+5. Lancer les tests :
+
+```powershell
+vendor\bin\phpunit --colors=never
+```
+
+Regénérer la documentation minimale (timestamp) :
+
+```powershell
+composer run docs:update
+```
+
+Dernière mise à jour : 2025-11-12T13:00:05+00:00

@@ -14,7 +14,7 @@ use App\Config\Database\Config;
 const ROOT = __DIR__ . '/..';
 // 1) Lecture arg
 
-$options = getopt('', ['table:', 'force', 'skip-views', 'help', 'no-session-check']);
+$options = getopt('', ['table:', 'force', 'skip-views', 'help', 'no-session-check', 'dry-run']);
 $table = is_string($options['table'] ?? null) ? $options['table'] : (is_string($argv[1] ?? null) ? $argv[1] : null);
 if (isset($options['help']) || !$table) {
     fwrite(STDERR, "Usage: php bin/scaffold.php <table> [options]\n");
@@ -30,6 +30,8 @@ if (isset($options['help']) || !$table) {
 $force = isset($options['force']);
 $skipViews = isset($options['skip-views']);
 $noSessionCheck = isset($options['no-session-check']);
+// If provided, do not write files; only show what would be created
+$dryRun = isset($options['dry-run']);
 // 3) Connexion PDO
 require_once ROOT . '/vendor/autoload.php';
 $dbConfig = new Config();
@@ -103,6 +105,32 @@ function parseEnumValues(string $columnType): array
         }
     }
     return $vals;
+}
+/**
+ * Write or simulate writing a generated file
+ *
+ * @param string $path
+ * @param string $content
+ * @param bool $force
+ * @param bool $dryRun
+ */
+function writeGeneratedFile(string $path, string $content, bool $force = false, bool $dryRun = false): void
+{
+    if ($dryRun) {
+        fwrite(STDOUT, "DRY-RUN: would write $path\n");
+        return;
+    }
+
+    if (file_exists($path) && !$force) {
+        throw new RuntimeException("Le fichier existe déjà et --force n'est pas fourni: $path");
+    }
+
+    $dir = dirname($path);
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0777, true);
+    }
+
+    file_put_contents($path, $content);
 }
 /**
  * Détermine les types PHP et autres métadonnées pour une colonne
@@ -332,7 +360,7 @@ $fromArrayBlock
 }
 PHP;
 assertNoUnresolvedPlaceholders($entityCode, $entityPath);
-file_put_contents($entityPath, $entityCode);
+    writeGeneratedFile($entityPath, $entityCode, $force, $dryRun);
 // 11) Interface
 $interfaceCode = <<<PHP
 <?php
@@ -347,7 +375,7 @@ interface {$Class}Interface
 }
 PHP;
 assertNoUnresolvedPlaceholders($interfaceCode, $interfacePath);
-file_put_contents($interfacePath, $interfaceCode);
+    writeGeneratedFile($interfacePath, $interfaceCode, $force, $dryRun);
 // 12) HYDRATOR
 $fromRow = [];
 $toRow   = [];
@@ -438,7 +466,7 @@ $toRowBlock
 }
 PHP;
 assertNoUnresolvedPlaceholders($hydratorCode, $hydratorPath);
-file_put_contents($hydratorPath, $hydratorCode);
+    writeGeneratedFile($hydratorPath, $hydratorCode, $force, $dryRun);
 // 13) REPOSITORY
 $colNames       = array_map(fn($f) => $f['name'], $fields);
 $colListSelect  = implode(', ', $colNames);
@@ -477,7 +505,7 @@ interface {$Class}RepositoryInterface
 }
 PHP;
 assertNoUnresolvedPlaceholders($repoIfaceCode, $repoIfacePath);
-file_put_contents($repoIfacePath, $repoIfaceCode);
+    writeGeneratedFile($repoIfacePath, $repoIfaceCode, $force, $dryRun);
 $isInsertLogic = $autoIncrement
     ? "        \$isInsert = (empty(\$data['{$pk}']) || \$data['{$pk}'] === 0 || \$data['{$pk}'] === '0');"
     : "        \$isInsert = (\$this->find(\$data['{$pk}']) === null);";
@@ -643,7 +671,7 @@ PHP
 }
 PHP;
 assertNoUnresolvedPlaceholders($repoImplCode, $repoImplPath);
-file_put_contents($repoImplPath, $repoImplCode);
+    writeGeneratedFile($repoImplPath, $repoImplCode, $force, $dryRun);
 // 14) SERVICE
 $serviceCode = <<<PHP
 <?php
@@ -712,7 +740,7 @@ class {$Class}Service
 }
 PHP;
 assertNoUnresolvedPlaceholders($serviceCode, $servicePath);
-file_put_contents($servicePath, $serviceCode);
+    writeGeneratedFile($servicePath, $serviceCode, $force, $dryRun);
 // 15) CONTROLLER + VUES
 if (!$skipViews) {
     $ctrlNotes = $compositePk ? "    /* NOTE: table with composite PK: " . implode(', ', $primaryKeys) . ". Adaptez find/update/delete pour des identifiants composites si nécessaire. */\n\n" : "";
@@ -927,7 +955,7 @@ PHP;
 }
 PHP;
     assertNoUnresolvedPlaceholders($ctrlCode, $ctrlPath);
-    file_put_contents($ctrlPath, $ctrlCode);
+    writeGeneratedFile($ctrlPath, $ctrlCode, $force, $dryRun);
 // 16) VUES
     $sessionStartSnippet = $noSessionCheck ? "" : "<?php\nif (session_status() === PHP_SESSION_NONE) { session_start(); }\n?>\n";
     $baseContent = <<<HTML
@@ -948,7 +976,7 @@ PHP;
 </html>
 HTML;
     assertNoUnresolvedPlaceholders($baseContent, "$layoutDir/base.php");
-    file_put_contents("$layoutDir/base.php", $baseContent);
+    writeGeneratedFile("$layoutDir/base.php", $baseContent, $force, $dryRun);
 // index.php
     $indexHeadCols = implode("\n", array_map(fn($f) => "            <th>" . ucfirst($f['name']) . "</th>", $fields));
     $indexBodyCols = implode("\n", array_map(fn($f) => "        <td><?= htmlspecialchars(\$item->get{$f['method']}()) ?></td>", $fields));
@@ -986,7 +1014,7 @@ $indexBodyCols
 require __DIR__ . '/../layouts/base.php';
 HTML;
     assertNoUnresolvedPlaceholders($indexContent, "$tplDir/index.php");
-    file_put_contents("$tplDir/index.php", $indexContent);
+    writeGeneratedFile("$tplDir/index.php", $indexContent, $force, $dryRun);
 // show.php
     $showLines = implode("\n", array_map(fn($f) => "        <p><strong>" . ucfirst($f['name']) . ":</strong> <?= htmlspecialchars(\$entity->get{$f['method']}()) ?></p>", $fields));
     $showContent = <<<HTML
@@ -1006,7 +1034,7 @@ $showLines
 require __DIR__ . '/../layouts/base.php';
 HTML;
     assertNoUnresolvedPlaceholders($showContent, "$tplDir/show.php");
-    file_put_contents("$tplDir/show.php", $showContent);
+    writeGeneratedFile("$tplDir/show.php", $showContent, $force, $dryRun);
 // form.php
     $formFields = '';
     foreach ($fields as $f) {
@@ -1066,7 +1094,7 @@ $formFields
 require __DIR__ . '/../layouts/base.php';
 HTML;
     assertNoUnresolvedPlaceholders($formContent, "$tplDir/form.php");
-    file_put_contents("$tplDir/form.php", $formContent);
+    writeGeneratedFile("$tplDir/form.php", $formContent, $force, $dryRun);
 }
 
 // Fin du script

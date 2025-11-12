@@ -99,7 +99,7 @@ Integration Tests
 | Issue | Root Cause | Impact | Status |
 |-------|-----------|--------|--------|
 | Phinx SQLite change() + Transaction conflict | Framework limitation with `change()` method in transactions | Initial test attempts failed with "table already exists"; resolved by using Phinx Manager in-process | ✅ RESOLVED |
-| SampleRepository tests missing DB table | Legacy tests created before schema; table `samples` not in migrations | 5 test errors; marked outside Phase B scope | 📝 TODO |
+| SampleRepository tests missing DB table | Legacy tests created before schema; table `samples` not in migrations | 5 test errors; marked outside Phase B scope | ✅ RESOLVED - Migration 20251112140000 created; tests now active |
 
 ---
 
