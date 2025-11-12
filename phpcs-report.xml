@@ -1,4 +1,55 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <checkstyle version="3.13.4">
+<file name="D:\GitRepos\Scaffolder\bin\log_progress.php">
+ <error line="1" column="1" severity="warning" message="A file should declare new symbols (classes, functions, constants, etc.) and cause no other side effects, or it should execute logic with side effects, but should not do both. The first symbol is defined on line 23 and the first side effect is on line 10." source="PSR1.Files.SideEffects.FoundWithSymbols"/>
+ <error line="6" column="1" severity="warning" message="Line exceeds 120 characters; contains 122 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="7" column="1" severity="warning" message="Line exceeds 120 characters; contains 124 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="138" column="189" severity="warning" message="Line exceeds 120 characters; contains 189 characters" source="Generic.Files.LineLength.TooLong"/>
+</file>
+<file name="D:\GitRepos\Scaffolder\bin\scaffold_v2.php">
+ <error line="1" column="1" severity="warning" message="A file should declare new symbols (classes, functions, constants, etc.) and cause no other side effects, or it should execute logic with side effects, but should not do both. The first symbol is defined on line 94 and the first side effect is on line 17." source="PSR1.Files.SideEffects.FoundWithSymbols"/>
+ <error line="138" column="12" severity="warning" message="Line exceeds 120 characters; contains 133 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="261" column="158" severity="warning" message="Line exceeds 120 characters; contains 158 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="263" column="157" severity="warning" message="Line exceeds 120 characters; contains 157 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="267" column="136" severity="warning" message="Line exceeds 120 characters; contains 136 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="270" column="163" severity="warning" message="Line exceeds 120 characters; contains 163 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="282" column="1942" severity="warning" message="Line exceeds 120 characters; contains 1942 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="287" column="1941" severity="warning" message="Line exceeds 120 characters; contains 1941 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="292" column="1943" severity="warning" message="Line exceeds 120 characters; contains 1943 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="297" column="2081" severity="warning" message="Line exceeds 120 characters; contains 2081 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="302" column="1944" severity="warning" message="Line exceeds 120 characters; contains 1944 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="307" column="2067" severity="warning" message="Line exceeds 120 characters; contains 2067 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="311" column="1944" severity="warning" message="Line exceeds 120 characters; contains 1944 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="316" column="1944" severity="warning" message="Line exceeds 120 characters; contains 1944 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="385" column="4873" severity="warning" message="Line exceeds 120 characters; contains 4873 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="390" column="4867" severity="warning" message="Line exceeds 120 characters; contains 4867 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="395" column="4869" severity="warning" message="Line exceeds 120 characters; contains 4869 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="400" column="4896" severity="warning" message="Line exceeds 120 characters; contains 4896 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="405" column="4870" severity="warning" message="Line exceeds 120 characters; contains 4870 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="410" column="4952" severity="warning" message="Line exceeds 120 characters; contains 4952 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="415" column="4870" severity="warning" message="Line exceeds 120 characters; contains 4870 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="608" column="160" severity="warning" message="Line exceeds 120 characters; contains 165 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="734" column="1" severity="warning" message="Line exceeds 120 characters; contains 128 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="744" column="196" severity="warning" message="Line exceeds 120 characters; contains 196 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="922" column="193" severity="warning" message="Line exceeds 120 characters; contains 193 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="925" column="237" severity="warning" message="Line exceeds 120 characters; contains 237 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="928" column="187" severity="warning" message="Line exceeds 120 characters; contains 187 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="931" column="211" severity="warning" message="Line exceeds 120 characters; contains 211 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="934" column="244" severity="warning" message="Line exceeds 120 characters; contains 244 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="938" column="213" severity="warning" message="Line exceeds 120 characters; contains 213 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="941" column="197" severity="warning" message="Line exceeds 120 characters; contains 197 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="958" column="129" severity="warning" message="Line exceeds 120 characters; contains 129 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="980" column="138" severity="warning" message="Line exceeds 120 characters; contains 138 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="1003" column="1" severity="warning" message="Line exceeds 120 characters; contains 142 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="1017" column="180" severity="warning" message="Line exceeds 120 characters; contains 180 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="1042" column="208" severity="warning" message="Line exceeds 120 characters; contains 208 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="1045" column="168" severity="warning" message="Line exceeds 120 characters; contains 168 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="1065" column="235" severity="warning" message="Line exceeds 120 characters; contains 235 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="1067" column="249" severity="warning" message="Line exceeds 120 characters; contains 249 characters" source="Generic.Files.LineLength.TooLong"/>
+ <error line="1084" column="1" severity="warning" message="Line exceeds 120 characters; contains 155 characters" source="Generic.Files.LineLength.TooLong"/>
+</file>
+<file name="D:\GitRepos\Scaffolder\config\bootstrap.php">
+ <error line="1" column="1" severity="warning" message="A file should declare new symbols (classes, functions, constants, etc.) and cause no other side effects, or it should execute logic with side effects, but should not do both. The first symbol is defined on line 8 and the first side effect is on line 10." source="PSR1.Files.SideEffects.FoundWithSymbols"/>
+</file>
 </checkstyle>
 
