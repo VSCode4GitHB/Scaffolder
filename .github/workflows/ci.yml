@@ -83,7 +83,7 @@ jobs:
           
       - name: Upload progress summary
         if: success()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: progress-summary
           path: |
@@ -96,7 +96,7 @@ jobs:
 
       - name: Archive JSONL logs
         if: always()  # Archive même en cas d'échec
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: progress-logs-${{ github.run_id }}
           path: |
