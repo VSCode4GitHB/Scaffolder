@@ -14,7 +14,13 @@ if (!file_exists($coveragePath)) {
 }
 
 try {
-    $xml = new SimpleXMLElement(file_get_contents($coveragePath));
+    // Correction de PHPStan: Vérifier la valeur de retour de file_get_contents() (Ligne 17)
+    $xmlStr = file_get_contents($coveragePath);
+    if ($xmlStr === false) {
+        throw new \RuntimeException("Failed to read coverage file: {$coveragePath}");
+    }
+    
+    $xml = new SimpleXMLElement($xmlStr);
     $metrics = $xml->xpath('//metrics[@type="statement"]');
 
     if (empty($metrics)) {

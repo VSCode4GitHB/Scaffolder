@@ -11,9 +11,10 @@
 
 ### 1.1 Objectif global
 
-Transformer le scaffold (générateur de code) et la plateforme CongoleseYouth en une **application web modulaire avec API REST + dashboard de gestion administrateur**. 
+Transformer le scaffold (générateur de code) et la plateforme CongoleseYouth en une **application web modulaire avec API REST + dashboard de gestion administrateur**.
 
 **Ressources cibles** :
+
 - **Pages d'administration** : gestion des contenus vitrine (services, posts, sections).
 - **Authentification** : accès contrôlé au dashboard (JWT ou sessions).
 - **CRUD completo** : création, lecture, mise à jour, suppression des entités principales.
@@ -35,34 +36,40 @@ Transformer le scaffold (générateur de code) et la plateforme CongoleseYouth e
 ### 2.1 Ressources prioritaires (MVP Phase C)
 
 #### Ressource 1: **Services**
+
 - **Modèle DB** : `services` (id, name, slug, icon_class, excerpt, body, details_url, number_badge, order_index, published)
 - **Cas d'usage** : CRUD complet, tri par `order_index`, filtrage par `published`.
 - **Priorité** : 🔴 **CRITIQUE** (visible sur homepage, gérée admin).
 
 #### Ressource 2: **Posts (Articles)**
+
 - **Modèle DB** : `posts` (id, title, slug, excerpt, body, featured_media_id, author_id, published_at, status)
   - Associations : authors, post_categories, post_tags.
 - **Cas d'usage** : CRUD + publication workflow (draft → published).
 - **Priorité** : 🟠 **HAUTE** (contenu éditorial, multicritère).
 
 #### Ressource 3: **Media (Bibliothèque)**
+
 - **Modèle DB** : `media` (id, path, title, alt_text, mime_type, width, height, media_type)
 - **Cas d'usage** : Upload, CRUD, liaison aux ressources (services, posts).
 - **Priorité** : 🟠 **HAUTE** (support images/assets).
 
 #### Ressource 4: **Configuration sections (Singletons)**
-- **Modèles DB** : 
+
+- **Modèles DB** :
   - `company_profile` (id=1 singleton)
   - `hero_section`, `feature_section`, `about_section`, `contact_section`, etc.
 - **Cas d'usage** : CRUD configuration unique par section (eyebrow, title, bg_media_id).
 - **Priorité** : 🟡 **MOYENNE** (personnalisation, pas CRUD massif).
 
 #### Ressource 5: **Utilisateurs & Authentification**
+
 - **Modèle** : Table `users` (à créer) — id, email, password_hash, role, created_at, updated_at.
 - **Cas d'usage** : Login/logout, JWT ou session + RBAC.
 - **Priorité** : 🔴 **CRITIQUE** (gate pour tout le dashboard).
 
 ### 2.2 Ressources secondaires (Phase C+)
+
 - Testimonials, Skills, FooterColumns, SocialLinks, Menus → CRUD optionnel.
 - ContactMessages → GET (read-only, analytics).
 - NewsletterSubscribers → POST (subscribe), GET (admin analytics).
@@ -95,6 +102,7 @@ Pour chaque ressource (Services, Posts, Media, etc.) :
 ### 3.3 Authentification & Autorisations
 
 #### Endpoints d'authentification
+
 ```
 POST   /api/v1/auth/login       → { email, password } → { token, user }
 POST   /api/v1/auth/logout      → { token } → { success }
@@ -103,11 +111,13 @@ POST   /api/v1/auth/refresh     → Refresh JWT token
 ```
 
 #### Middleware d'autorisations
+
 - **RequireAuth** : Bloquer si aucun token valide.
 - **RequireRole(role)** : Bloquer si user.role ≠ role (Admin, Editor, Viewer).
 - **OwnerOrAdmin** : Bloquer si user.id ≠ resource.owner_id ET user.role ≠ Admin.
 
 #### RBAC Roles
+
 ```
 Admin    → Full access (tous endpoints)
 Editor   → POST/PUT/DELETE sur posts, services (own ou assigned)
@@ -117,11 +127,13 @@ Viewer   → GET seulement
 ### 3.4 Réponses & Codes HTTP
 
 #### Succès (2xx)
+
 - **200 OK** : GET, PUT (modification réussie).
 - **201 Created** : POST (création réussie).
 - **204 No Content** : DELETE (suppression réussie, pas de body).
 
 #### Client errors (4xx)
+
 - **400 Bad Request** : Validation échouée (missing fields, invalid format).
 - **401 Unauthorized** : Missing/invalid token.
 - **403 Forbidden** : Insufficient permissions.
@@ -129,10 +141,12 @@ Viewer   → GET seulement
 - **409 Conflict** : Slug duplicata, constraint violation.
 
 #### Server errors (5xx)
+
 - **500 Internal Server Error** : Erreur serveur non gérée.
 - **503 Service Unavailable** : DB down, external service.
 
 #### Format d'erreur
+
 ```json
 {
   "error": {
@@ -149,6 +163,7 @@ Viewer   → GET seulement
 ### 3.5 DTO Structures (exemples)
 
 #### ServiceDTO (request/response)
+
 ```json
 {
   "id": 1,
@@ -167,6 +182,7 @@ Viewer   → GET seulement
 ```
 
 #### PostDTO (request/response)
+
 ```json
 {
   "id": 1,
@@ -188,6 +204,7 @@ Viewer   → GET seulement
 ```
 
 #### UserDTO (response)
+
 ```json
 {
   "id": 1,
@@ -305,6 +322,7 @@ App::group('/api/v1/admin', AuthMiddleware::class, function(Router $r) {
 ### 5.1 Migrations à ajouter
 
 #### Migration 1: `create_users_table`
+
 ```sql
 CREATE TABLE IF NOT EXISTS `users` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -321,13 +339,16 @@ CREATE TABLE IF NOT EXISTS `users` (
 ```
 
 #### Migration 2: Optionnel — `add_soft_delete_to_services`
+
 ```sql
 ALTER TABLE `services` ADD COLUMN `deleted_at` DATETIME DEFAULT NULL;
 ALTER TABLE `posts` ADD COLUMN `deleted_at` DATETIME DEFAULT NULL;
 ```
+
 (Pour soft-delete, logs d'audit optionnels).
 
 #### Migration 3: Optionnel — `create_audit_log_table`
+
 ```sql
 CREATE TABLE IF NOT EXISTS `audit_logs` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -610,29 +631,34 @@ frontend/
 ### 7.2 Key pages & flows
 
 #### Page: Login
+
 - Form avec email/password.
 - POST /api/v1/auth/login → store token (localStorage ou httpOnly cookie).
 - Redirect to /dashboard on success.
 - Error handling + display.
 
 #### Page: Services (List)
+
 - GET /api/v1/services (paginated).
 - Display table/list avec columns: name, badge, order, published, actions.
 - Actions: Edit, Delete, Preview.
 - Buttons: "+ Add Service" → redirects to Create.
 
 #### Page: Services (Create/Edit)
+
 - Form avec fields: name, slug, excerpt, body, icon_class, order_index, published.
 - RichText editor pour body (optionnel: SimpleMDE, React-Quill).
 - POST /api/v1/admin/services (create) ou PUT /api/v1/admin/services/{id} (edit).
 - Success toast + redirect to list.
 
 #### Page: Posts (List/CRUD)
+
 - Similar to Services.
 - Additional fields: author, status (draft/published/scheduled), categories, tags.
 - Multi-select for categories/tags.
 
 #### Page: Media (Library)
+
 - Upload zone (drag-drop).
 - Grid/table view avec thumbnails.
 - Delete capability.
@@ -643,6 +669,7 @@ frontend/
 ## 8. Dépendances & librairies
 
 ### Backend PHP
+
 | Lib | Purpose | Version |
 |-----|---------|---------|
 | Slim Framework | API framework | ^4.0 |
@@ -654,6 +681,7 @@ frontend/
 | PHPCS | Linting | ^3.7 |
 
 ### Frontend (React + TS)
+
 | Lib | Purpose | Version |
 |-----|---------|---------|
 | React | UI framework | ^18.0 |
