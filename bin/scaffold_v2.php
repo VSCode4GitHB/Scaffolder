@@ -140,14 +140,12 @@ function writeGeneratedFile(string $path, string $content, bool $force = false, 
 function phpType(array $col): array
 {
 
-    $dataType = strtolower($col['DATA_TYPE']);
-    $colType  = strtolower($col['COLUMN_TYPE']);
+    $dataType = strtolower((string)($col['DATA_TYPE'] ?? ''));
+    $colType  = strtolower((string)($col['COLUMN_TYPE'] ?? ''));
     $nullable = ($col['IS_NULLABLE'] === 'YES');
     if (!is_string($dataType) || !is_string($colType)) {
         return ['string', 'string', $nullable, '', ''];
     }
-    $dataType = strtolower($dataType);
-    $colType = strtolower($colType);
     $map = match (true) {
         $dataType === 'tinyint' && preg_match('/tinyint\(1\)/', $colType) => ['bool','bool'],
         in_array($dataType, ['int','integer','smallint','mediumint','bigint','tinyint']) => ['int','int'],

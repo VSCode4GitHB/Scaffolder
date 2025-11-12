@@ -17,10 +17,13 @@ final class CreateSamplesTable extends AbstractMigration
     public function change(): void
     {
         // Table des exemples pour tests d'intégration
-        $this->table('samples', ['id' => false, 'primary_key' => ['id']])
-            ->addColumn('id', 'integer', ['identity' => true, 'autoIncrement' => true])
-            ->addColumn('name', 'string', ['limit' => 255])
-            ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
-            ->create();
+        // Check if table exists to avoid "table already exists" error (idempotent)
+        if (!$this->hasTable('samples')) {
+            $this->table('samples', ['id' => false, 'primary_key' => ['id']])
+                ->addColumn('id', 'integer', ['identity' => true])
+                ->addColumn('name', 'string', ['limit' => 255])
+                ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
+                ->create();
+        }
     }
 }
