@@ -23,7 +23,7 @@ function clean_file_path(string $path): string {
 /**
  * Exécute la logique d'initialisation de l'environnement.
  */
-function run_bootstrap() {
+function run_bootstrap(): void {
     // Initialisation des constantes (Effets secondaires, ligne 10 et suivantes)
     if (!defined('ROOT')) {
         define('ROOT', dirname(__DIR__));

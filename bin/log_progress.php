@@ -40,7 +40,7 @@ function parseArgs(array $argv): array
 /**
  * Fonction principale d'exécution du script.
  */
-function run_log_progress_script()
+function run_log_progress_script(): void
 {
     global $argv; // Accès aux arguments globaux
 

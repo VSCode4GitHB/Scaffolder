@@ -137,7 +137,7 @@ function assertNoUnresolvedPlaceholders(string $content, string $path): void
 /**
  * Fonction principale d'exécution du script de scaffolding.
  */
-function run_scaffolding()
+function run_scaffolding():void
 {
     global $argv; // Accès aux arguments globaux
 
