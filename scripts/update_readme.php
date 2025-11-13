@@ -8,7 +8,13 @@ if (!file_exists($readme)) {
     exit(1);
 }
 
+// Correction de PHPStan: Vérifier la valeur de retour de file_get_contents() (Ligne 15, 16, 19)
 $contents = file_get_contents($readme);
+if ($contents === false) {
+    fwrite(STDERR, "Failed to read README.md\n");
+    exit(1);
+}
+
 $now = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('c');
 
 // If a line starting with "Dernière mise à jour" exists, replace it

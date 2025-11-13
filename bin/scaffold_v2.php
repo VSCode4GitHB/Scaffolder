@@ -2,90 +2,18 @@
 
 declare(strict_types=1);
 
-// bin/scaffold_v2.php
-// Usage: php bin/scaffold_v2.php [TABLE_NAME || ENTITY_NAME] --table=[TABLE_NAME || ENTITY_NAME] --force
-
 namespace Scaffold;
 
 use PDO;
 use RuntimeException;
 use App\Config\Database\Config;
 
+// ==========================================================
+// 1. Déclaration des symboles (Constantes et Fonctions)
+// ==========================================================
+
 const ROOT = __DIR__ . '/..';
-// 1) Lecture arg
 
-$options = getopt('', ['table:', 'force', 'skip-views', 'help', 'no-session-check', 'dry-run']);
-$table = is_string($options['table'] ?? null) ? $options['table'] : (is_string($argv[1] ?? null) ? $argv[1] : null);
-if (isset($options['help']) || !$table) {
-    fwrite(STDERR, "Usage: php bin/scaffold.php <table> [options]\n");
-    fwrite(STDERR, "Options:\n");
-    fwrite(STDERR, "  --table=name        Table name (required)\n");
-    fwrite(STDERR, "  --force             Overwrite existing files\n");
-    fwrite(STDERR, "  --skip-views        Skip controller/view generation\n");
-    fwrite(STDERR, "  --no-session-check  Do not auto-insert session_start() in generated layout\n");
-    fwrite(STDERR, "  --help              Show this help\n");
-    exit(1);
-}
-
-$force = isset($options['force']);
-$skipViews = isset($options['skip-views']);
-$noSessionCheck = isset($options['no-session-check']);
-// If provided, do not write files; only show what would be created
-$dryRun = isset($options['dry-run']);
-// 3) Connexion PDO
-require_once ROOT . '/vendor/autoload.php';
-$dbConfig = new Config();
-$pdo = $dbConfig->connection;
-// 4) Colonnes
-$sql = "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY, EXTRA,
-               COLUMN_COMMENT, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = :schema AND TABLE_NAME = :table
-        ORDER BY ORDINAL_POSITION";
-$cols = $pdo->prepare($sql);
-$cols->execute(['schema' => $dbConfig->dbName, 'table' => $table]);
-$columns = $cols->fetchAll();
-if (!$columns) {
-    throw new RuntimeException("Table '$table' introuvable.");
-}
-
-// 5) Foreign keys
-$foreignKeys = [];
-try {
-    $fkSql = "SELECT COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
-              FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-              WHERE TABLE_SCHEMA = :schema AND TABLE_NAME = :table
-                AND REFERENCED_TABLE_NAME IS NOT NULL";
-    $fkStmt = $pdo->prepare($fkSql);
-    $fkStmt->execute(['schema' => $dbConfig->dbName, 'table' => $table]);
-    $foreignKeys = $fkStmt->fetchAll();
-} catch (\Exception $e) {
-    fwrite(STDERR, "Avertissement: impossible de récupérer les FK\n");
-}
-
-// 6) PK
-$primaryKeys = [];
-$autoIncrement = false;
-$aiPkName = null;
-foreach ($columns as $c) {
-    if ($c['COLUMN_KEY'] === 'PRI') {
-        $primaryKeys[] = $c['COLUMN_NAME'];
-        if (strpos((string)$c['EXTRA'], 'auto_increment') !== false) {
-            $autoIncrement = true;
-            $aiPkName = $c['COLUMN_NAME'];
-        }
-    }
-}
-$compositePk = count($primaryKeys) > 1;
-if ($compositePk) {
-    fwrite(STDERR, "Warning: PK composite détectée: " . implode(',', $primaryKeys) . "\n");
-}
-if (!$primaryKeys) {
-    throw new RuntimeException("Aucune PK détectée");
-}
-$pk = $primaryKeys[0];
-
-// 7) Helpers
 /**
  * Parse les valeurs d'une colonne ENUM/SET MySQL
  * @param string $columnType Type de la colonne (ex: "enum('a','b','c')")
@@ -106,6 +34,7 @@ function parseEnumValues(string $columnType): array
     }
     return $vals;
 }
+
 /**
  * Write or simulate writing a generated file
  *
@@ -132,6 +61,7 @@ function writeGeneratedFile(string $path, string $content, bool $force = false, 
 
     file_put_contents($path, $content);
 }
+
 /**
  * Détermine les types PHP et autres métadonnées pour une colonne
  * @param array<string, mixed> $col Définition de la colonne depuis INFORMATION_SCHEMA
@@ -147,15 +77,15 @@ function phpType(array $col): array
         return ['string', 'string', $nullable, '', ''];
     }
     $map = match (true) {
-        $dataType === 'tinyint' && preg_match('/tinyint\(1\)/', $colType) => ['bool','bool'],
-        in_array($dataType, ['int','integer','smallint','mediumint','bigint','tinyint']) => ['int','int'],
-        in_array($dataType, ['decimal','float','double','real']) => ['float','float'],
-        in_array($dataType, ['date','datetime','timestamp']) => ['\\DateTimeImmutable','datetime'],
-        $dataType === 'time' => ['string','time'],
-        $dataType === 'year' => ['int','year'],
-        $dataType === 'json' => ['array','json'],
-        in_array($dataType, ['set','enum']) => ['string','enum'],
-        default => ['string','string'],
+        $dataType === 'tinyint' && preg_match('/tinyint\(1\)/', $colType) => ['bool', 'bool'],
+        in_array($dataType, ['int', 'integer', 'smallint', 'mediumint', 'bigint', 'tinyint']) => ['int', 'int'],
+        in_array($dataType, ['decimal', 'float', 'double', 'real']) => ['float', 'float'],
+        in_array($dataType, ['date', 'datetime', 'timestamp']) => ['\\DateTimeImmutable', 'datetime'],
+        $dataType === 'time' => ['string', 'time'],
+        $dataType === 'year' => ['int', 'year'],
+        $dataType === 'json' => ['array', 'json'],
+        in_array($dataType, ['set', 'enum']) => ['string', 'enum'],
+        default => ['string', 'string'],
     };
     $php = $map[0];
     $kind = $map[1];
@@ -163,6 +93,7 @@ function phpType(array $col): array
     $columnType = is_string($col['COLUMN_TYPE'] ?? null) ? $col['COLUMN_TYPE'] : '';
     return [$nullable ? ('?' . $php) : $php, $kind, $nullable, $comment, $columnType];
 }
+
 function normalizeColumnForCode(string $name): string
 {
 
@@ -172,21 +103,25 @@ function normalizeColumnForCode(string $name): string
     if ($clean === '' || preg_match('/^[0-9]/', $clean)) {
         $clean = 'f_' . $clean;
     }
-    return implode('', array_map(fn($p)=>ucfirst(strtolower($p)), explode('_', $clean)));
+    return implode('', array_map(fn($p) => ucfirst(strtolower($p)), explode('_', $clean)));
 }
+
 function classNameFromTable(string $t): string
 {
     $t = preg_replace('/[^a-z0-9_]/i', '_', $t);
-    return implode('', array_map(fn($p)=>ucfirst(strtolower($p)), explode('_', $t)));
+    return implode('', array_map(fn($p) => ucfirst(strtolower($p)), explode('_', $t)));
 }
 
-// 8) Vérification des fichiers existants
+/**
+ * Vérification des fichiers existants
+ */
 function ensureWritable(string $path, bool $force): void
 {
     if (file_exists($path) && !$force) {
         throw new RuntimeException("Le fichier existe déjà et --force n'est pas fourni: $path");
     }
 }
+
 function assertNoUnresolvedPlaceholders(string $content, string $path): void
 {
     if (preg_match('/\{\$[A-Za-z0-9_]+\}/', $content)) {
@@ -194,134 +129,220 @@ function assertNoUnresolvedPlaceholders(string $content, string $path): void
     }
 }
 
-$Class = classNameFromTable($table);
-$PkMethod = normalizeColumnForCode($pk);
-$entityDir   = ROOT . "/src/Domain/Entity";
-$hydratorDir = ROOT . "/src/Infrastructure/Hydration";
-$repoIfaceDir = ROOT . "/src/Domain/Repository";
-$repoImplDir = ROOT . "/src/Infrastructure/Repository";
-$serviceDir  = ROOT . "/src/Domain/Service";
-$ctrlDir     = ROOT . "/src/Application/Controller";
-$layoutDir   = ROOT . "/templates/layouts";
-$tplDir      = ROOT . "/templates/" . strtolower($table);
-$routesDir   = ROOT . "/config";
-$testDir     = ROOT . "/tests/Domain/Entity";
-$factoryDir  = ROOT . "/tests/Factories";
-@mkdir($entityDir, 0777, true);
-@mkdir($hydratorDir, 0777, true);
-@mkdir($repoIfaceDir, 0777, true);
-@mkdir($repoImplDir, 0777, true);
-@mkdir($serviceDir, 0777, true);
-if (!$skipViews) {
-    @mkdir($ctrlDir, 0777, true);
-    @mkdir($layoutDir, 0777, true);
-    @mkdir($tplDir, 0777, true);
-}
-@mkdir($routesDir, 0777, true);
-@mkdir($testDir, 0777, true);
-@mkdir($factoryDir, 0777, true);
-$entityPath    = "$entityDir/{$Class}.php";
-$interfacePath = "$entityDir/{$Class}Interface.php";
-$hydratorPath  = "$hydratorDir/{$Class}Hydrator.php";
-$repoIfacePath = "$repoIfaceDir/{$Class}RepositoryInterface.php";
-$repoImplPath  = "$repoImplDir/{$Class}Repository.php";
-$servicePath   = "$serviceDir/{$Class}Service.php";
-$ctrlPath      = "$ctrlDir/{$Class}Controller.php";
-$pathsToCheck = [$entityPath, $interfacePath, $hydratorPath, $repoIfacePath, $repoImplPath, $servicePath];
-if (!$skipViews) {
-    $pathsToCheck[] = $ctrlPath;
-    $pathsToCheck[] = "$layoutDir/base.php";
-    $pathsToCheck[] = "$tplDir/index.php";
-    $pathsToCheck[] = "$tplDir/show.php";
-    $pathsToCheck[] = "$tplDir/form.php";
-}
-foreach ($pathsToCheck as $p) {
-    ensureWritable($p, $force);
-}
 
-// 9) Préparer champs
-$fields = [];
-foreach ($columns as $col) {
-    [$phpT,$kind,$nullable,$comment,$columnType] = phpType($col);
-    $fields[] = [
-        'name'       => $col['COLUMN_NAME'],
-        'method'     => normalizeColumnForCode($col['COLUMN_NAME']),
-        'phpType'    => $phpT,
-        'kind'       => $kind,
-        'nullable'   => $nullable,
-        'comment'    => $comment,
-        'maxLength'  => $col['CHARACTER_MAXIMUM_LENGTH'] ?? null,
-        'precision'  => $col['NUMERIC_PRECISION'] ?? null,
-        'scale'      => $col['NUMERIC_SCALE'] ?? null,
-        'enumValues' => parseEnumValues($columnType)
-    ];
-}
+// ==========================================================
+// 2. Logique d'exécution (Effets secondaires)
+// ==========================================================
 
-// 10) Générer ENTITÉ
-$propsBlock       = implode("\n", array_map(fn($f) => "    private {$f['phpType']} \${$f['name']};" . ($f['comment'] ? " // {$f['comment']}" : ''), $fields));
-$constructorBlock = implode(",\n", array_map(fn($f) => "        {$f['phpType']} \${$f['name']}", $fields));
-$getsBlock        = implode("\n", array_map(fn($f) => "    public function get{$f['method']}(): {$f['phpType']} { return \$this->{$f['name']}; }", $fields));
-$setsBlock        = implode("\n", array_map(function ($f) use ($primaryKeys) {
+/**
+ * Fonction principale d'exécution du script de scaffolding.
+ */
+function run_scaffolding(): void
+{
+    global $argv; // Accès aux arguments globaux
 
-    if (!in_array($f['name'], $primaryKeys, true)) {
-        return "    public function set{$f['method']}({$f['phpType']} \${$f['name']}): void { \$this->{$f['name']} = \${$f['name']}; }";
-    } else {
-        $ret = ltrim($f['phpType'], '?');
-        return "    public function with{$f['method']}({$ret} \${$f['name']}): self { \$new = clone \$this; \$new->{$f['name']} = \${$f['name']}; return \$new; }";
+    // 1) Lecture arg
+    $options = getopt('', ['table:', 'force', 'skip-views', 'help', 'no-session-check', 'dry-run']);
+    $table = is_string($options['table'] ?? null) ? $options['table'] : (is_string($argv[1] ?? null) ? $argv[1] : null);
+    if (isset($options['help']) || !$table) {
+        fwrite(STDERR, "Usage: php bin/scaffold.php <table> [options]\n");
+        fwrite(STDERR, "Options:\n");
+        fwrite(STDERR, "  --table=name        Table name (required)\n");
+        fwrite(STDERR, "  --force             Overwrite existing files\n");
+        fwrite(STDERR, "  --skip-views        Skip controller/view generation\n");
+        fwrite(STDERR, "  --no-session-check  Do not auto-insert session_start() in generated layout\n");
+        fwrite(STDERR, "  --help              Show this help\n");
+        exit(1);
     }
-}, $fields));
-$toArrayBlock     = implode(",\n", array_map(fn($f) => "            '{$f['name']}' => \$this->{$f['name']}", $fields));
-// fromArray expressions par champ
-$fromArrayArgs = [];
-foreach ($fields as $f) {
-    $n = $f['name'];
-    $k = $f['kind'];
-    $nullable = $f['nullable'];
-    switch ($k) {
-        case 'bool':
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $expr = "(isset(\$data['{$n}']) ? (bool)\$data['{$n}'] : null)";
-            $expr = $nullable ? $expr : "({$expr}) ?? false";
 
-            break;
-        case 'int':
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $expr = "(isset(\$data['{$n}']) ? (int)\$data['{$n}'] : null)";
-            $expr = $nullable ? $expr : "({$expr}) ?? 0";
-
-            break;
-        case 'float':
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $expr = "(isset(\$data['{$n}']) ? (float)\$data['{$n}'] : null)";
-            $expr = $nullable ? $expr : "({$expr}) ?? 0.0";
-
-            break;
-        case 'datetime':
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $expr = "(!empty(\$data['{$n}']) ? (\$data['{$n}'] instanceof \\DateTimeInterface ? new \\DateTimeImmutable(\$data['{$n}']->format(DATE_ATOM)) : new \\DateTimeImmutable((string)\$data['{$n}'])) : null)";
-            $expr = $nullable ? $expr : "({$expr}) ?? throw new \\InvalidArgumentException('{$n} est requis')";
-
-            break;
-        case 'time':
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $expr = "(isset(\$data['{$n}']) ? (string)\$data['{$n}'] : null)";
-            $expr = $nullable ? $expr : "({$expr}) ?? throw new \\InvalidArgumentException('{$n} est requis')";
-
-            break;
-        case 'json':
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $expr = "(!empty(\$data['{$n}']) ? (is_array(\$data['{$n}']) ? \$data['{$n}'] : json_decode((string)\$data['{$n}'], true, 512, JSON_THROW_ON_ERROR)) : " . ($nullable ? 'null' : '[]') . ")";
-
-            break;
-        case 'enum':
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $expr = "(isset(\$data['{$n}']) ? (string)\$data['{$n}'] : null)";
-            $expr = $nullable ? $expr : "({$expr}) ?? ''";
-
-            break;
-        default:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $expr = "(isset(\$data['{$n}']) ? (string)\$data['{$n}'] : null)";
-            $expr = $nullable ? $expr : "({$expr}) ?? ''";
-
-            break;
+    $force = isset($options['force']);
+    $skipViews = isset($options['skip-views']);
+    $noSessionCheck = isset($options['no-session-check']);
+    // If provided, do not write files; only show what would be created
+    $dryRun = isset($options['dry-run']);
+    // 3) Connexion PDO
+    require_once ROOT . '/vendor/autoload.php';
+    $dbConfig = new Config();
+    $pdo = $dbConfig->connection;
+    // 4) Colonnes
+    $sql = "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY, EXTRA,
+               COLUMN_COMMENT, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = :schema AND TABLE_NAME = :table
+        ORDER BY ORDINAL_POSITION";
+    $cols = $pdo->prepare($sql);
+    $cols->execute(['schema' => $dbConfig->dbName, 'table' => $table]);
+    $columns = $cols->fetchAll();
+    if (!$columns) {
+        throw new RuntimeException("Table '$table' introuvable.");
     }
-    $fromArrayArgs[] = "            {$expr}";
-}
-$fromArrayBlock   = implode(",\n", $fromArrayArgs);
-$entityCode = <<<PHP
+
+    // 5) Foreign keys
+    $foreignKeys = [];
+    try {
+        $fkSql = "SELECT COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
+              FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+              WHERE TABLE_SCHEMA = :schema AND TABLE_NAME = :table
+                AND REFERENCED_TABLE_NAME IS NOT NULL";
+        $fkStmt = $pdo->prepare($fkSql);
+        $fkStmt->execute(['schema' => $dbConfig->dbName, 'table' => $table]);
+        $foreignKeys = $fkStmt->fetchAll();
+    } catch (\Exception $e) {
+        fwrite(STDERR, "Avertissement: impossible de récupérer les FK\n");
+    }
+
+    // 6) PK
+    $primaryKeys = [];
+    $autoIncrement = false;
+    $aiPkName = null;
+    foreach ($columns as $c) {
+        if ($c['COLUMN_KEY'] === 'PRI') {
+            $primaryKeys[] = $c['COLUMN_NAME'];
+            if (strpos((string)$c['EXTRA'], 'auto_increment') !== false) {
+                $autoIncrement = true;
+                $aiPkName = $c['COLUMN_NAME'];
+            }
+        }
+    }
+    $compositePk = count($primaryKeys) > 1;
+    if ($compositePk) {
+        fwrite(STDERR, "Warning: PK composite détectée: " . implode(',', $primaryKeys) . "\n");
+    }
+    if (!$primaryKeys) {
+        throw new RuntimeException("Aucune PK détectée");
+    }
+    $pk = $primaryKeys[0];
+
+
+    // 8) Vérification des fichiers existants
+    $Class = classNameFromTable($table);
+    $PkMethod = normalizeColumnForCode($pk);
+    $entityDir   = ROOT . "/src/Domain/Entity";
+    $hydratorDir = ROOT . "/src/Infrastructure/Hydration";
+    $repoIfaceDir = ROOT . "/src/Domain/Repository";
+    $repoImplDir = ROOT . "/src/Infrastructure/Repository";
+    $serviceDir  = ROOT . "/src/Domain/Service";
+    $ctrlDir     = ROOT . "/src/Application/Controller";
+    $layoutDir   = ROOT . "/templates/layouts";
+    $tplDir      = ROOT . "/templates/" . strtolower($table);
+    $routesDir   = ROOT . "/config";
+    $testDir     = ROOT . "/tests/Domain/Entity";
+    $factoryDir  = ROOT . "/tests/Factories";
+    @mkdir($entityDir, 0777, true);
+    @mkdir($hydratorDir, 0777, true);
+    @mkdir($repoIfaceDir, 0777, true);
+    @mkdir($repoImplDir, 0777, true);
+    @mkdir($serviceDir, 0777, true);
+    if (!$skipViews) {
+        @mkdir($ctrlDir, 0777, true);
+        @mkdir($layoutDir, 0777, true);
+        @mkdir($tplDir, 0777, true);
+    }
+    @mkdir($routesDir, 0777, true);
+    @mkdir($testDir, 0777, true);
+    @mkdir($factoryDir, 0777, true);
+    $entityPath    = "$entityDir/{$Class}.php";
+    $interfacePath = "$entityDir/{$Class}Interface.php";
+    $hydratorPath  = "$hydratorDir/{$Class}Hydrator.php";
+    $repoIfacePath = "$repoIfaceDir/{$Class}RepositoryInterface.php";
+    $repoImplPath  = "$repoImplDir/{$Class}Repository.php";
+    $servicePath   = "$serviceDir/{$Class}Service.php";
+    $ctrlPath      = "$ctrlDir/{$Class}Controller.php";
+    $pathsToCheck = [$entityPath, $interfacePath, $hydratorPath, $repoIfacePath, $repoImplPath, $servicePath];
+    if (!$skipViews) {
+        $pathsToCheck[] = $ctrlPath;
+        $pathsToCheck[] = "$layoutDir/base.php";
+        $pathsToCheck[] = "$tplDir/index.php";
+        $pathsToCheck[] = "$tplDir/show.php";
+        $pathsToCheck[] = "$tplDir/form.php";
+    }
+    foreach ($pathsToCheck as $p) {
+        ensureWritable($p, $force);
+    }
+
+    // 9) Préparer champs
+    $fields = [];
+    foreach ($columns as $col) {
+        [$phpT, $kind, $nullable, $comment, $columnType] = phpType($col);
+        $fields[] = [
+            'name'       => $col['COLUMN_NAME'],
+            'method'     => normalizeColumnForCode($col['COLUMN_NAME']),
+            'phpType'    => $phpT,
+            'kind'       => $kind,
+            'nullable'   => $nullable,
+            'comment'    => $comment,
+            'maxLength'  => $col['CHARACTER_MAXIMUM_LENGTH'] ?? null,
+            'precision'  => $col['NUMERIC_PRECISION'] ?? null,
+            'scale'      => $col['NUMERIC_SCALE'] ?? null,
+            'enumValues' => parseEnumValues($columnType)
+        ];
+    }
+
+    // 10) Générer ENTITÉ
+    $propsBlock       = implode("\n", array_map(fn($f) => "    private {$f['phpType']} \${$f['name']};" . ($f['comment'] ? " // {$f['comment']}" : ''), $fields));
+    $constructorBlock = implode(",\n", array_map(fn($f) => "        {$f['phpType']} \${$f['name']}", $fields));
+    $getsBlock        = implode("\n", array_map(fn($f) => "    public function get{$f['method']}(): {$f['phpType']} { return \$this->{$f['name']}; }", $fields));
+    $setsBlock        = implode("\n", array_map(function ($f) use ($primaryKeys) {
+
+        if (!in_array($f['name'], $primaryKeys, true)) {
+            return "    public function set{$f['method']}({$f['phpType']} \${$f['name']}): void { \$this->{$f['name']} = \${$f['name']}; }";
+        } else {
+            $ret = ltrim($f['phpType'], '?');
+            return "    public function with{$f['method']}({$ret} \${$f['name']}): self { \$new = clone \$this; \$new->{$f['name']} = \${$f['name']}; return \$new; }";
+        }
+    }, $fields));
+    $toArrayBlock     = implode(",\n", array_map(fn($f) => "            '{$f['name']}' => \$this->{$f['name']}", $fields));
+    // fromArray expressions par champ
+    $fromArrayArgs = [];
+    foreach ($fields as $f) {
+        $n = $f['name'];
+        $k = $f['kind'];
+        $nullable = $f['nullable'];
+        switch ($k) {
+            case 'bool':
+                $expr = "(isset(\$data['{$n}']) ? (bool)\$data['{$n}'] : null)";
+                $expr = $nullable ? $expr : "({$expr}) ?? false";
+
+                break;
+            case 'int':
+                $expr = "(isset(\$data['{$n}']) ? (int)\$data['{$n}'] : null)";
+                $expr = $nullable ? $expr : "({$expr}) ?? 0";
+
+                break;
+            case 'float':
+                $expr = "(isset(\$data['{$n}']) ? (float)\$data['{$n}'] : null)";
+                $expr = $nullable ? $expr : "({$expr}) ?? 0.0";
+
+                break;
+            case 'datetime':
+                $expr = "(!empty(\$data['{$n}']) ? (\$data['{$n}'] instanceof \\DateTimeInterface ? new \\DateTimeImmutable(\$data['{$n}']->format(DATE_ATOM)) : new \\DateTimeImmutable((string)\$data['{$n}'])) : null)";
+                $expr = $nullable ? $expr : "({$expr}) ?? throw new \\InvalidArgumentException('{$n} est requis')";
+
+                break;
+            case 'time':
+                $expr = "(isset(\$data['{$n}']) ? (string)\$data['{$n}'] : null)";
+                $expr = $nullable ? $expr : "({$expr}) ?? throw new \\InvalidArgumentException('{$n} est requis')";
+
+                break;
+            case 'json':
+                $expr = "(!empty(\$data['{$n}']) ? (is_array(\$data['{$n}']) ? \$data['{$n}'] : json_decode((string)\$data['{$n}'], true, 512, JSON_THROW_ON_ERROR)) : " . ($nullable ? 'null' : '[]') . ")";
+
+                break;
+            case 'enum':
+                $expr = "(isset(\$data['{$n}']) ? (string)\$data['{$n}'] : null)";
+                $expr = $nullable ? $expr : "({$expr}) ?? ''";
+
+                break;
+            default:
+                $expr = "(isset(\$data['{$n}']) ? (string)\$data['{$n}'] : null)";
+                $expr = $nullable ? $expr : "({$expr}) ?? ''";
+
+                break;
+        }
+        $fromArrayArgs[] = "            {$expr}";
+    }
+    $fromArrayBlock   = implode(",\n", $fromArrayArgs);
+    $entityCode = <<<PHP
 <?php
 declare(strict_types=1);
 
@@ -357,10 +378,10 @@ $fromArrayBlock
     }
 }
 PHP;
-assertNoUnresolvedPlaceholders($entityCode, $entityPath);
+    assertNoUnresolvedPlaceholders($entityCode, $entityPath);
     writeGeneratedFile($entityPath, $entityCode, $force, $dryRun);
-// 11) Interface
-$interfaceCode = <<<PHP
+    // 11) Interface
+    $interfaceCode = <<<PHP
 <?php
 declare(strict_types=1);
 
@@ -372,64 +393,64 @@ interface {$Class}Interface
     public static function fromArray(array \$data): self;
 }
 PHP;
-assertNoUnresolvedPlaceholders($interfaceCode, $interfacePath);
+    assertNoUnresolvedPlaceholders($interfaceCode, $interfacePath);
     writeGeneratedFile($interfacePath, $interfaceCode, $force, $dryRun);
-// 12) HYDRATOR
-$fromRow = [];
-$toRow   = [];
-foreach ($fields as $f) {
-    $expr = "\$row['{$f['name']}']";
-    $to   = "\$e->get{$f['method']}()";
-    switch ($f['kind']) {
-        case 'bool':
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $from = "(isset($expr) ? (bool)(int)$expr : null)";
-            $toExpr = "({$to} === null ? null : ({$to} ? 1 : 0))";
+    // 12) HYDRATOR
+    $fromRow = [];
+    $toRow   = [];
+    foreach ($fields as $f) {
+        $expr = "\$row['{$f['name']}']";
+        $to   = "\$e->get{$f['method']}()";
+        switch ($f['kind']) {
+            case 'bool':
+                $from = "(isset($expr) ? (bool)(int)$expr : null)";
+                $toExpr = "({$to} === null ? null : ({$to} ? 1 : 0))";
 
-            break;
-        case 'int':
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $from = "(isset($expr) ? (int)$expr : null)";
-            $toExpr = $to;
+                break;
+            case 'int':
+                $from = "(isset($expr) ? (int)$expr : null)";
+                $toExpr = $to;
 
-            break;
-        case 'float':
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $from = "(isset($expr) ? (float)$expr : null)";
-            $toExpr = $to;
+                break;
+            case 'float':
+                $from = "(isset($expr) ? (float)$expr : null)";
+                $toExpr = $to;
 
-            break;
-        case 'datetime':
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $from = "(!empty($expr) ? new \\DateTimeImmutable((string)$expr) : null)";
-            $toExpr = "({$to} ? {$to}->format('Y-m-d H:i:s') : null)";
+                break;
+            case 'datetime':
+                $from = "(!empty($expr) ? new \\DateTimeImmutable((string)$expr) : null)";
+                $toExpr = "({$to} ? {$to}->format('Y-m-d H:i:s') : null)";
 
-            break;
-        case 'time':
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $from = "(isset($expr) ? (string)$expr : null)";
-            $toExpr = $to;
+                break;
+            case 'time':
+                $from = "(isset($expr) ? (string)$expr : null)";
+                $toExpr = $to;
 
-            break;
-        case 'json':
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $from = "(!empty($expr) ? json_decode((string)$expr, true, 512, JSON_THROW_ON_ERROR) : " . ($f['nullable'] ? 'null' : '[]') . ")";
-            $toExpr = "({$to} === null ? null : json_encode({$to}, JSON_THROW_ON_ERROR))";
+                break;
+            case 'json':
+                $from = "(!empty($expr) ? json_decode((string)$expr, true, 512, JSON_THROW_ON_ERROR) : " . ($f['nullable'] ? 'null' : '[]') . ")";
+                $toExpr = "({$to} === null ? null : json_encode({$to}, JSON_THROW_ON_ERROR))";
 
-            break;
-        default:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $from = "(isset($expr) ? (string)$expr : null)";
-            $toExpr = $to;
+                break;
+            default:
+                $from = "(isset($expr) ? (string)$expr : null)";
+                $toExpr = $to;
+        }
+        $defaultValue = match ($f['kind']) {
+            'bool' => 'false',
+            'int' => '0',
+            'float' => '0.0',
+            'string', 'enum', 'time' => "''",
+            'datetime' => 'null',
+            'json' => $f['nullable'] ? 'null' : '[]',
+            default => 'null'
+        };
+        $fromRow[] = "            '{$f['name']}' => " . ($f['nullable'] ? $from : "($from) ?? $defaultValue") . ",";
+        $toRow[]   = "            '{$f['name']}' => $toExpr,";
     }
-    $defaultValue = match ($f['kind']) {
-        'bool' => 'false',
-        'int' => '0',
-        'float' => '0.0',
-        'string', 'enum', 'time' => "''",
-        'datetime' => 'null',
-        'json' => $f['nullable'] ? 'null' : '[]',
-        default => 'null'
-    };
-    $fromRow[] = "            '{$f['name']}' => " . ($f['nullable'] ? $from : "($from) ?? $defaultValue") . ",";
-    $toRow[]   = "            '{$f['name']}' => $toExpr,";
-}
-$fromRowBlock = implode("\n", $fromRow);
-$toRowBlock   = implode("\n", $toRow);
-$hydratorCode = <<<PHP
+    $fromRowBlock = implode("\n", $fromRow);
+    $toRowBlock   = implode("\n", $toRow);
+    $hydratorCode = <<<PHP
 <?php
 declare(strict_types=1);
 
@@ -463,21 +484,21 @@ $toRowBlock
     }
 }
 PHP;
-assertNoUnresolvedPlaceholders($hydratorCode, $hydratorPath);
+    assertNoUnresolvedPlaceholders($hydratorCode, $hydratorPath);
     writeGeneratedFile($hydratorPath, $hydratorCode, $force, $dryRun);
-// 13) REPOSITORY
-$colNames       = array_map(fn($f) => $f['name'], $fields);
-$colListSelect  = implode(', ', $colNames);
-// Colonnes pour INSERT/UPDATE
-$insertColNames = $colNames;
-if ($autoIncrement && $aiPkName !== null) {
-    $insertColNames = array_values(array_filter($insertColNames, fn($n) => $n !== $aiPkName));
-}
-$updateColNames = array_values(array_filter($colNames, fn($n) => $n !== $pk));
-$placeholdersInsert = implode(', ', array_map(fn($n) => ":$n", $insertColNames));
-$colListInsert      = implode(', ', $insertColNames);
-$updates            = implode(",\n                ", array_map(fn($n) => "$n = :$n", $updateColNames));
-$repoIfaceCode = <<<PHP
+    // 13) REPOSITORY
+    $colNames       = array_map(fn($f) => $f['name'], $fields);
+    $colListSelect  = implode(', ', $colNames);
+    // Colonnes pour INSERT/UPDATE
+    $insertColNames = $colNames;
+    if ($autoIncrement && $aiPkName !== null) {
+        $insertColNames = array_values(array_filter($insertColNames, fn($n) => $n !== $aiPkName));
+    }
+    $updateColNames = array_values(array_filter($colNames, fn($n) => $n !== $pk));
+    $placeholdersInsert = implode(', ', array_map(fn($n) => ":$n", $insertColNames));
+    $colListInsert      = implode(', ', $insertColNames);
+    $updates            = implode(",\n                ", array_map(fn($n) => "$n = :$n", $updateColNames));
+    $repoIfaceCode = <<<PHP
 <?php
 declare(strict_types=1);
 
@@ -502,12 +523,12 @@ interface {$Class}RepositoryInterface
     public function count(array \$criteria = []): int;
 }
 PHP;
-assertNoUnresolvedPlaceholders($repoIfaceCode, $repoIfacePath);
+    assertNoUnresolvedPlaceholders($repoIfaceCode, $repoIfacePath);
     writeGeneratedFile($repoIfacePath, $repoIfaceCode, $force, $dryRun);
-$isInsertLogic = $autoIncrement
-    ? "        \$isInsert = (empty(\$data['{$pk}']) || \$data['{$pk}'] === 0 || \$data['{$pk}'] === '0');"
-    : "        \$isInsert = (\$this->find(\$data['{$pk}']) === null);";
-$repoImplCode = <<<PHP
+    $isInsertLogic = $autoIncrement
+        ? "        \$isInsert = (empty(\$data['{$pk}']) || \$data['{$pk}'] === 0 || \$data['{$pk}'] === '0');"
+        : "        \$isInsert = (\$this->find(\$data['{$pk}']) === null);";
+    $repoImplCode = <<<PHP
 <?php
 declare(strict_types=1);
 
@@ -543,7 +564,7 @@ class {$Class}Repository implements {$Class}RepositoryInterface
     {
         \$allowed = 
 PHP
-. var_export($colNames, true) . ";\n" . <<<PHP
+        . var_export($colNames, true) . ";\n" . <<<PHP
         \$whereParts = [];
         \$params = [];
 
@@ -605,7 +626,7 @@ $isInsertLogic
         if (\$isInsert) {
             \$this->insert(\$data);
 PHP
-. ($autoIncrement ? "            \$lastId = (int)\$this->pdo->lastInsertId(); if (\$lastId > 0) { \$entity = \$entity->with{$PkMethod}(\$lastId); }\n" : "") . <<<PHP
+        . ($autoIncrement ? "            \$lastId = (int)\$this->pdo->lastInsertId(); if (\$lastId > 0) { \$entity = \$entity->with{$PkMethod}(\$lastId); }\n" : "") . <<<PHP
         } else {
             \$this->update(\$data);
         }
@@ -618,7 +639,7 @@ PHP
         \$sql = "INSERT INTO {$table} ({$colListInsert}) VALUES ({$placeholdersInsert})";
         \$payload = array_intersect_key(\$data, array_flip(
 PHP
-. var_export($insertColNames, true) . "));\n" . <<<PHP
+        . var_export($insertColNames, true) . "));\n" . <<<PHP
         \$this->pdo->prepare(\$sql)->execute(\$payload);
     }
 
@@ -629,7 +650,7 @@ PHP
             WHERE {$pk} = :{$pk}";
         \$payload = array_intersect_key(\$data, array_flip(
 PHP
-. var_export(array_merge($updateColNames, [$pk]), true) . "));\n" . <<<PHP
+        . var_export(array_merge($updateColNames, [$pk]), true) . "));\n" . <<<PHP
         \$this->pdo->prepare(\$sql)->execute(\$payload);
     }
 
@@ -643,7 +664,7 @@ PHP
     {
         \$allowed = 
 PHP
-. var_export($colNames, true) . ";\n" . <<<PHP
+        . var_export($colNames, true) . ";\n" . <<<PHP
         \$whereParts = [];
         \$params = [];
 
@@ -668,10 +689,10 @@ PHP
     }
 }
 PHP;
-assertNoUnresolvedPlaceholders($repoImplCode, $repoImplPath);
+    assertNoUnresolvedPlaceholders($repoImplCode, $repoImplPath);
     writeGeneratedFile($repoImplPath, $repoImplCode, $force, $dryRun);
-// 14) SERVICE
-$serviceCode = <<<PHP
+    // 14) SERVICE
+    $serviceCode = <<<PHP
 <?php
 declare(strict_types=1);
 
@@ -737,12 +758,12 @@ class {$Class}Service
     }
 }
 PHP;
-assertNoUnresolvedPlaceholders($serviceCode, $servicePath);
+    assertNoUnresolvedPlaceholders($serviceCode, $servicePath);
     writeGeneratedFile($servicePath, $serviceCode, $force, $dryRun);
-// 15) CONTROLLER + VUES
-if (!$skipViews) {
-    $ctrlNotes = $compositePk ? "    /* NOTE: table with composite PK: " . implode(', ', $primaryKeys) . ". Adaptez find/update/delete pour des identifiants composites si nécessaire. */\n\n" : "";
-    $ctrlCode = <<<PHP
+    // 15) CONTROLLER + VUES
+    if (!$skipViews) {
+        $ctrlNotes = $compositePk ? "    /* NOTE: table with composite PK: " . implode(', ', $primaryKeys) . ". Adaptez find/update/delete pour des identifiants composites si nécessaire. */\n\n" : "";
+        $ctrlCode = <<<PHP
 <?php
 declare(strict_types=1);
 
@@ -914,35 +935,35 @@ class {$Class}Controller
     {
         \$errors = [];
 PHP;
-// Règles dynamiques (incl. enum values + PK immuable si non composite)
-    $rulesLines = [];
-    foreach ($fields as $f) {
-        $name = $f['name'];
-        if (!$f['nullable']) {
-            $rulesLines[] = "        if (!array_key_exists('{$name}', \$data) || (\$data['{$name}'] === '' || \$data['{$name}'] === null)) { \$errors[] = 'Le champ {$name} est obligatoire'; }";
+        // Règles dynamiques (incl. enum values + PK immuable si non composite)
+        $rulesLines = [];
+        foreach ($fields as $f) {
+            $name = $f['name'];
+            if (!$f['nullable']) {
+                $rulesLines[] = "        if (!array_key_exists('{$name}', \$data) || (\$data['{$name}'] === '' || \$data['{$name}'] === null)) { \$errors[] = 'Le champ {$name} est obligatoire'; }";
+            }
+            if ($f['maxLength']) {
+                $rulesLines[] = "        if (!empty(\$data['{$name}']) && is_string(\$data['{$name}']) && strlen(\$data['{$name}']) > {$f['maxLength']}) { \$errors[] = 'Le champ {$name} ne doit pas dépasser {$f['maxLength']} caractères'; }";
+            }
+            if ($f['kind'] === 'int' || $f['kind'] === 'float') {
+                $rulesLines[] = "        if (isset(\$data['{$name}']) && \$data['{$name}'] !== '' && !is_numeric(\$data['{$name}'])) { \$errors[] = 'Le champ {$name} doit être un nombre'; }";
+            }
+            if ($f['kind'] === 'datetime') {
+                $rulesLines[] = "        if (isset(\$data['{$name}']) && \$data['{$name}'] !== '' && (strtotime((string)\$data['{$name}']) === false)) { \$errors[] = 'Le champ {$name} doit être une date valide'; }";
+            }
+            if ($f['kind'] === 'time') {
+                $rulesLines[] = "        if (isset(\$data['{$name}']) && \$data['{$name}'] !== '' && !preg_match('/^\\d{2}:\\d{2}(:\\d{2})?$/', (string)\$data['{$name}'])) { \$errors[] = 'Le champ {$name} doit être une heure valide HH:MM[:SS]'; }";
+            }
+            if (!empty($f['enumValues'])) {
+                $allowed = var_export($f['enumValues'], true);
+                $rulesLines[] = "        if (isset(\$data['{$name}']) && \$data['{$name}'] !== '' && !in_array((string)\$data['{$name}'], {$allowed}, true)) { \$errors[] = 'Le champ {$name} a une valeur invalide'; }";
+            }
+            if ($name === $pk && !$compositePk) {
+                $rulesLines[] = "        if (\$id !== null && isset(\$data['{$name}']) && (string)\$data['{$name}'] !== (string)\$id) { \$errors[] = 'Modification de la clé primaire non autorisée'; }";
+            }
         }
-        if ($f['maxLength']) {
-            $rulesLines[] = "        if (!empty(\$data['{$name}']) && is_string(\$data['{$name}']) && strlen(\$data['{$name}']) > {$f['maxLength']}) { \$errors[] = 'Le champ {$name} ne doit pas dépasser {$f['maxLength']} caractères'; }";
-        }
-        if ($f['kind'] === 'int' || $f['kind'] === 'float') {
-            $rulesLines[] = "        if (isset(\$data['{$name}']) && \$data['{$name}'] !== '' && !is_numeric(\$data['{$name}'])) { \$errors[] = 'Le champ {$name} doit être un nombre'; }";
-        }
-        if ($f['kind'] === 'datetime') {
-            $rulesLines[] = "        if (isset(\$data['{$name}']) && \$data['{$name}'] !== '' && (strtotime((string)\$data['{$name}']) === false)) { \$errors[] = 'Le champ {$name} doit être une date valide'; }";
-        }
-        if ($f['kind'] === 'time') {
-            $rulesLines[] = "        if (isset(\$data['{$name}']) && \$data['{$name}'] !== '' && !preg_match('/^\\d{2}:\\d{2}(:\\d{2})?$/', (string)\$data['{$name}'])) { \$errors[] = 'Le champ {$name} doit être une heure valide HH:MM[:SS]'; }";
-        }
-        if (!empty($f['enumValues'])) {
-            $allowed = var_export($f['enumValues'], true);
-            $rulesLines[] = "        if (isset(\$data['{$name}']) && \$data['{$name}'] !== '' && !in_array((string)\$data['{$name}'], {$allowed}, true)) { \$errors[] = 'Le champ {$name} a une valeur invalide'; }";
-        }
-        if ($name === $pk && !$compositePk) {
-            $rulesLines[] = "        if (\$id !== null && isset(\$data['{$name}']) && (string)\$data['{$name}'] !== (string)\$id) { \$errors[] = 'Modification de la clé primaire non autorisée'; }";
-        }
-    }
 
-    $ctrlCode .= "\n" . implode("\n", $rulesLines) . "\n\n" . <<<PHP
+        $ctrlCode .= "\n" . implode("\n", $rulesLines) . "\n\n" . <<<PHP
         return \$errors;
     }
 
@@ -952,11 +973,11 @@ PHP;
     }
 }
 PHP;
-    assertNoUnresolvedPlaceholders($ctrlCode, $ctrlPath);
-    writeGeneratedFile($ctrlPath, $ctrlCode, $force, $dryRun);
-// 16) VUES
-    $sessionStartSnippet = $noSessionCheck ? "" : "<?php\nif (session_status() === PHP_SESSION_NONE) { session_start(); }\n?>\n";
-    $baseContent = <<<HTML
+        assertNoUnresolvedPlaceholders($ctrlCode, $ctrlPath);
+        writeGeneratedFile($ctrlPath, $ctrlCode, $force, $dryRun);
+        // 16) VUES
+        $sessionStartSnippet = $noSessionCheck ? "" : "<?php\nif (session_status() === PHP_SESSION_NONE) { session_start(); }\n?>\n";
+        $baseContent = <<<HTML
 {$sessionStartSnippet}<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -973,12 +994,12 @@ PHP;
 </body>
 </html>
 HTML;
-    assertNoUnresolvedPlaceholders($baseContent, "$layoutDir/base.php");
-    writeGeneratedFile("$layoutDir/base.php", $baseContent, $force, $dryRun);
-// index.php
-    $indexHeadCols = implode("\n", array_map(fn($f) => "            <th>" . ucfirst($f['name']) . "</th>", $fields));
-    $indexBodyCols = implode("\n", array_map(fn($f) => "        <td><?= htmlspecialchars(\$item->get{$f['method']}()) ?></td>", $fields));
-    $indexContent = <<<HTML
+        assertNoUnresolvedPlaceholders($baseContent, "$layoutDir/base.php");
+        writeGeneratedFile("$layoutDir/base.php", $baseContent, $force, $dryRun);
+        // index.php
+        $indexHeadCols = implode("\n", array_map(fn($f) => "            <th>" . ucfirst($f['name']) . "</th>", $fields));
+        $indexBodyCols = implode("\n", array_map(fn($f) => "        <td><?= htmlspecialchars(\$item->get{$f['method']}()) ?></td>", $fields));
+        $indexContent = <<<HTML
 <?php
 \$title = 'Liste des {$Class}s';
 ob_start();
@@ -1011,11 +1032,11 @@ $indexBodyCols
 \$content = ob_get_clean();
 require __DIR__ . '/../layouts/base.php';
 HTML;
-    assertNoUnresolvedPlaceholders($indexContent, "$tplDir/index.php");
-    writeGeneratedFile("$tplDir/index.php", $indexContent, $force, $dryRun);
-// show.php
-    $showLines = implode("\n", array_map(fn($f) => "        <p><strong>" . ucfirst($f['name']) . ":</strong> <?= htmlspecialchars(\$entity->get{$f['method']}()) ?></p>", $fields));
-    $showContent = <<<HTML
+        assertNoUnresolvedPlaceholders($indexContent, "$tplDir/index.php");
+        writeGeneratedFile("$tplDir/index.php", $indexContent, $force, $dryRun);
+        // show.php
+        $showLines = implode("\n", array_map(fn($f) => "        <p><strong>" . ucfirst($f['name']) . ":</strong> <?= htmlspecialchars(\$entity->get{$f['method']}()) ?></p>", $fields));
+        $showContent = <<<HTML
 <?php
 \$title = 'Détails';
 ob_start();
@@ -1031,44 +1052,44 @@ $showLines
 \$content = ob_get_clean();
 require __DIR__ . '/../layouts/base.php';
 HTML;
-    assertNoUnresolvedPlaceholders($showContent, "$tplDir/show.php");
-    writeGeneratedFile("$tplDir/show.php", $showContent, $force, $dryRun);
-// form.php
-    $formFields = '';
-    foreach ($fields as $f) {
-        $n = $f['name'];
-        $label = ucfirst($n);
-        if (!empty($f['enumValues'])) {
-            $formFields .= "    <div class=\"mb-3\">\n        <label class=\"form-label\">{$label}</label>\n        <select name=\"{$n}\" class=\"form-select\">\n            <option value=\"\">--</option>\n";
-            foreach ($f['enumValues'] as $val) {
-                $esc = htmlspecialchars($val, ENT_QUOTES);
-                $formFields .= "            <option value=\"{$esc}\" <?= (isset(\$data['{$n}']) && \$data['{$n}'] === '{$esc}') ? 'selected' : '' ?>>{$esc}</option>\n";
+        assertNoUnresolvedPlaceholders($showContent, "$tplDir/show.php");
+        writeGeneratedFile("$tplDir/show.php", $showContent, $force, $dryRun);
+        // form.php
+        $formFields = '';
+        foreach ($fields as $f) {
+            $n = $f['name'];
+            $label = ucfirst($n);
+            if (!empty($f['enumValues'])) {
+                $formFields .= "    <div class=\"mb-3\">\n        <label class=\"form-label\">{$label}</label>\n        <select name=\"{$n}\" class=\"form-select\">\n            <option value=\"\">--</option>\n";
+                foreach ($f['enumValues'] as $val) {
+                    $esc = htmlspecialchars($val, ENT_QUOTES);
+                    $formFields .= "            <option value=\"{$esc}\" <?= (isset(\$data['{$n}']) && \$data['{$n}'] === '{$esc}') ? 'selected' : '' ?>>{$esc}</option>\n";
+                }
+                $formFields .= "        </select\n    </div>\n";
+                continue;
             }
-            $formFields .= "        </select\n    </div>\n";
-            continue;
-        }
-        $type = 'text';
-        if ($f['kind'] === 'int') {
-            $type = 'number';
-        }
-        if ($f['kind'] === 'float') {
-            $type = 'number" step="any';
-        }
-        if ($f['kind'] === 'datetime') {
-            $type = 'datetime-local';
-        }
-        if ($f['kind'] === 'time') {
-            $type = 'time';
+            $type = 'text';
+            if ($f['kind'] === 'int') {
+                $type = 'number';
+            }
+            if ($f['kind'] === 'float') {
+                $type = 'number" step="any';
+            }
+            if ($f['kind'] === 'datetime') {
+                $type = 'datetime-local';
+            }
+            if ($f['kind'] === 'time') {
+                $type = 'time';
+            }
+
+            if ($f['kind'] === 'json') {
+                $formFields .= "    <div class=\"mb-3\">\n        <label class=\"form-label\">{$label}</label>\n        <textarea name=\"{$n}\" class=\"form-control\"><?= htmlspecialchars(\$data['{$n}'] ?? '') ?></textarea>\n    </div>\n";
+            } else {
+                $formFields .= "    <div class=\"mb-3\">\n        <label class=\"form-label\">{$label}</label>\n        <input type=\"{$type}\" name=\"{$n}\" class=\"form-control\" value=\"<?= htmlspecialchars(\$data['{$n}'] ?? '') ?>\">\n    </div>\n";
+            }
         }
 
-        if ($f['kind'] === 'json') {
-            $formFields .= "    <div class=\"mb-3\">\n        <label class=\"form-label\">{$label}</label>\n        <textarea name=\"{$n}\" class=\"form-control\"><?= htmlspecialchars(\$data['{$n}'] ?? '') ?></textarea>\n    </div>\n";
-        } else {
-            $formFields .= "    <div class=\"mb-3\">\n        <label class=\"form-label\">{$label}</label>\n        <input type=\"{$type}\" name=\"{$n}\" class=\"form-control\" value=\"<?= htmlspecialchars(\$data['{$n}'] ?? '') ?>\">\n    </div>\n";
-        }
-    }
-
-    $formContent = <<<HTML
+        $formContent = <<<HTML
 <?php
 \$title = isset(\$data['{$pk}']) && \$data['{$pk}'] !== '' ? 'Éditer {$Class}' : 'Créer {$Class}';
 ob_start();
@@ -1091,8 +1112,17 @@ $formFields
 \$content = ob_get_clean();
 require __DIR__ . '/../layouts/base.php';
 HTML;
-    assertNoUnresolvedPlaceholders($formContent, "$tplDir/form.php");
-    writeGeneratedFile("$tplDir/form.php", $formContent, $force, $dryRun);
+        assertNoUnresolvedPlaceholders($formContent, "$tplDir/form.php");
+        writeGeneratedFile("$tplDir/form.php", $formContent, $force, $dryRun);
+    }
+
+    // Fin du script (dans la fonction run_scaffolding)
 }
 
-// Fin du script
+
+// ==========================================================
+// 3. Lancement de l'exécution
+// ==========================================================
+
+// Appel unique de la fonction pour démarrer le script.
+run_scaffolding();

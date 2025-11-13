@@ -22,12 +22,18 @@ echo "Command: " . implode(' ', $cmd) . "\n";
 echo "DB_NAME: $dbFile\n";
 
 $process = proc_open($cmd, $descriptors, $pipes, $projectRoot, $env);
+
+// Correction de PHPStan: Vérifier que proc_open a réussi (Ligne 30)
+if ($process === false || !is_resource($process)) {
+    throw new \RuntimeException("proc_open failed for command: " . implode(' ', $cmd));
+}
+
 fclose($pipes[0]);
 $stdout = stream_get_contents($pipes[1]);
 fclose($pipes[1]);
 $stderr = stream_get_contents($pipes[2]);
 fclose($pipes[2]);
-$return = proc_close($process);
+$return = proc_close($process); // Maintenant sûr
 
 echo "Return code: $return\n";
 echo "STDOUT:\n$stdout\n";
@@ -40,12 +46,18 @@ echo "Command: " . implode(' ', $cmd) . "\n";
 echo "DB_NAME: $dbFile\n";
 
 $process = proc_open($cmd, $descriptors, $pipes, $projectRoot, $env);
+
+// Correction de PHPStan: Vérifier que proc_open a réussi (Ligne 48)
+if ($process === false || !is_resource($process)) {
+    throw new \RuntimeException("proc_open failed for command: " . implode(' ', $cmd));
+}
+
 fclose($pipes[0]);
 $stdout = stream_get_contents($pipes[1]);
 fclose($pipes[1]);
 $stderr = stream_get_contents($pipes[2]);
 fclose($pipes[2]);
-$return = proc_close($process);
+$return = proc_close($process); // Maintenant sûr
 
 echo "Return code: $return\n";
 echo "STDOUT:\n$stdout\n";
@@ -53,5 +65,3 @@ echo "DB file exists: " . (file_exists($dbFile) ? 'YES' : 'NO') . "\n";
 if (file_exists($dbFile)) {
     echo "Size: " . filesize($dbFile) . " bytes\n";
 }
-
-

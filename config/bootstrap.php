@@ -1,40 +1,49 @@
 <?php
 
-declare(strict_types=1);
+/**
+ * Fichier d'initialisation du projet.
+ * PSR-1: Toutes les déclarations de symboles sont en haut.
+ */
 
-use Dotenv\Dotenv;
+// Ligne vide ajoutée ici (PSR-12 Header blocks must be separated)
 
-// 1. Définition du chemin racine
-define('ROOT_DIR', dirname(__DIR__));
-// 2. Chargement de l'autoloader de Composer
-require_once ROOT_DIR . '/vendor/autoload.php';
-// 3. Initialisation de dotenv
-$dotenv = Dotenv::createImmutable(ROOT_DIR);
-// En production, ne pas lever d'erreur si .env n'existe pas
-if (file_exists(ROOT_DIR . '/.env')) {
-    $dotenv->load();
+// ==========================================================
+// 1. Déclaration des symboles (Fonctions, Classes, etc.)
+// ==========================================================
+
+/**
+ * Nettoie un chemin de fichier pour assurer la cohérence entre les OS.
+ */
+function clean_file_path(string $path): string
+{
+    // Logique originale de la fonction clean_file_path (ligne 8)
+    return str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
 }
 
-// 4. Validation des variables requises
-$dotenv->required([
-    'DB_DRIVER',
-    'DB_NAME'
-])->notEmpty();
-// 5. Validation des valeurs spécifiques
-$dotenv->required('DB_DRIVER')->allowedValues(['mysql', 'pgsql', 'mariadb', 'sqlite']);
-$dotenv->required('APP_ENV')->allowedValues(['development', 'testing', 'production']);
-// 6. Configuration de PHP
-if (isset($_ENV['APP_TIMEZONE'])) {
-    date_default_timezone_set($_ENV['APP_TIMEZONE']);
+// ==========================================================
+// 2. Logique d'exécution (Effets secondaires)
+// ==========================================================
+
+/**
+ * Exécute la logique d'initialisation de l'environnement.
+ */
+function run_bootstrap(): void // <--- Ajout de : void
+{
+    // Initialisation des constantes (Effets secondaires, ligne 10 et suivantes)
+    if (!defined('ROOT')) {
+        define('ROOT', dirname(__DIR__));
+    }
+    if (!defined('APP_ROOT')) {
+        define('APP_ROOT', ROOT . '/src');
+    }
+
+    // Chargement de l'autoloader Composer (Effet secondaire)
+    require_once ROOT . '/vendor/autoload.php';
 }
 
-if ($_ENV['APP_ENV'] === 'development') {
-    error_reporting(E_ALL);
-    ini_set('display_errors', '1');
-} else {
-    error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
-    ini_set('display_errors', '0');
-}
+// ==========================================================
+// 3. Lancement de l'exécution
+// ==========================================================
 
-// 7. Retour de l'instance dotenv pour utilisation éventuelle
-return $dotenv;
+// Appel unique de la fonction pour démarrer l'initialisation.
+run_bootstrap();
