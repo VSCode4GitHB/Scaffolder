@@ -1,8 +1,11 @@
 <?php
+
 /**
  * Fichier d'initialisation du projet.
  * PSR-1: Toutes les déclarations de symboles sont en haut.
  */
+
+// Ligne vide ajoutée ici (PSR-12 Header blocks must be separated)
 
 // ==========================================================
 // 1. Déclaration des symboles (Fonctions, Classes, etc.)
@@ -11,7 +14,8 @@
 /**
  * Nettoie un chemin de fichier pour assurer la cohérence entre les OS.
  */
-function clean_file_path(string $path): string {
+function clean_file_path(string $path): string
+{
     // Logique originale de la fonction clean_file_path (ligne 8)
     return str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
 }
@@ -23,7 +27,8 @@ function clean_file_path(string $path): string {
 /**
  * Exécute la logique d'initialisation de l'environnement.
  */
-function run_bootstrap(): void {
+function run_bootstrap(): void // <--- Ajout de : void
+{
     // Initialisation des constantes (Effets secondaires, ligne 10 et suivantes)
     if (!defined('ROOT')) {
         define('ROOT', dirname(__DIR__));
@@ -31,7 +36,7 @@ function run_bootstrap(): void {
     if (!defined('APP_ROOT')) {
         define('APP_ROOT', ROOT . '/src');
     }
-    
+
     // Chargement de l'autoloader Composer (Effet secondaire)
     require_once ROOT . '/vendor/autoload.php';
 }

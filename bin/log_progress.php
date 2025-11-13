@@ -18,7 +18,7 @@
  */
 function parseArgs(array $argv): array
 {
-
+    // ... (logique parseArgs non modifiée)
     $out = [];
     foreach ($argv as $a) {
         if (str_starts_with($a, '--')) {
@@ -40,10 +40,10 @@ function parseArgs(array $argv): array
 /**
  * Fonction principale d'exécution du script.
  */
-function run_log_progress_script(): void
+function run_log_progress_script(): void // <--- Ajout de : void
 {
     global $argv; // Accès aux arguments globaux
-
+    // ... (Reste de la logique d'exécution non modifiée, terminant par exit(0) ou similaire)
     if (PHP_SAPI !== 'cli') {
         fwrite(STDERR, "This script must be run from CLI\n");
         exit(1);
@@ -94,7 +94,7 @@ function run_log_progress_script(): void
         $entry .= "Commandes:\n\n````powershell\n{$commands}\n````\n\n";
         $entry .= "Vérification:\n\n- (à compléter)\n\n";
     } elseif ($action === 'finish') {
-    // Append finish notes under the last matching ID by inserting near the top (before the marker)
+        // Append finish notes under the last matching ID by inserting near the top (before the marker)
         // Simpler approach: append a completion block referencing the ID
         $entry .= "### ID: {$id} — {$title} (completion)\n";
         $entry .= "Statut: completed\n";
@@ -122,7 +122,7 @@ function run_log_progress_script(): void
 
     // Also optionally write JSON line if requested (accept 'json' or 'jsonl')
     if (in_array(($params['format'] ?? ''), ['json', 'jsonl', 'md,json', 'json,md', 'jsonl,md', 'md,jsonl'], true)) {
-    // prepare JSON object
+        // prepare JSON object
         $obj = [
             'id' => $id,
             'phase' => $phase,
@@ -136,7 +136,7 @@ function run_log_progress_script(): void
             'notes' => $notes,
         ];
         $jsonLine = json_encode($obj, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
-    // rotate if file exists and is larger than threshold
+        // rotate if file exists and is larger than threshold
         if (file_exists($outJson) && ($size = filesize($outJson)) !== false && $size > $rotateSize) {
             $content = file_get_contents($outJson);
             if ($content !== false) {
@@ -144,7 +144,7 @@ function run_log_progress_script(): void
                 $compressed = gzencode($content);
                 if ($compressed !== false) {
                     file_put_contents($bak, $compressed);
-            // truncate original file (start fresh)
+                    // truncate original file (start fresh)
                     @unlink($outJson);
                 }
             }
@@ -152,7 +152,7 @@ function run_log_progress_script(): void
 
         file_put_contents($outJson, $jsonLine, FILE_APPEND | LOCK_EX);
     }
-    fwrite(STDOUT, "Entry appended" . ($noMd ? " (no-md)" : " to {$journal}") . ((in_array(($params['format'] ?? ''), ['json','jsonl'], true)) ? " and JSON written to {$outJson}" : "") . "\n");
+    fwrite(STDOUT, "Entry appended" . ($noMd ? " (no-md)" : " to {$journal}") . ((in_array(($params['format'] ?? ''), ['json', 'jsonl'], true)) ? " and JSON written to {$outJson}" : "") . "\n");
     exit(0);
 }
 
