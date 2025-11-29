@@ -40,9 +40,11 @@ $force = isset($options['force']);
 $skipViews = isset($options['skip-views']);
 $noSessionCheck = isset($options['no-session-check']);
 
-// 3) Connexion PDO
-require_once ROOT . '../config/database.php';
-$pdo = getPdo();
+// 3) Connexion PDO (via Config OO et autoload Composer)
+require_once ROOT . '/../vendor/autoload.php';
+use App\Config\Database\Config as DbConfig;
+$db = new DbConfig();
+$pdo = $db->connection;
 
 // 4) Colonnes
 $sql = "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY, EXTRA,
@@ -1873,7 +1875,7 @@ COMMIT;
 
 ```
 
-* **Connexion BDD:** `./config/database.php`
+* **Connexion BDD:** `App\\Config\\Database\\Config`
 * **Plan directeur:** `./Scaffold-Maxima-Project-Executive-Plan.md`
 qui est ce même fichier en cours de lecture.
 ---

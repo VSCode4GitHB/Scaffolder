@@ -11,7 +11,7 @@ Résumé du mapping entre le plan directeur (`Scaffold-Maxima-Project-Executive-
 ## 1) Synthèse rapide
 - Le projet contient déjà :
   - `bin/scaffold_v2.php` (script principal de génération) — implémentation riche et conforme aux idées du plan.
-  - `config/database.php` (connexion PDO configurée)
+  - `config/Database/Config.php` (classe OO de configuration PDO)
   - `docker/` + `docker-compose.yml` (présence d'infrastructure container)
   - `composer.json` avec dev deps (phpunit, phpstan, phpcs)
   - `public/index.php`, `migrations/`, `templates/`, `tests/` (présents mais vides pour la plupart)
@@ -64,7 +64,7 @@ Proposées (prêtes à être appliquées si vous validez)
 
 ## 5) Risques / remarques
 - Le script de scaffolding peut écrire beaucoup de fichiers; créez une branche dédiée pour expérimenter la génération et vérifiez l'option `--force` avant d'écraser.
-- Les identifiants DB dans `config/database.php` semblent être en clair: migrer vers variables d'environnement (`.env`) et documenter l'usage.
+- Les identifiants DB doivent être fournis via variables d'environnement (`.env`) et chargés par `vlucas/phpdotenv` (voir `config/Database/Config.php`).
 
 ## 6) Prochaines étapes recommandées (livrables immédiats)
 - Phase A (fondation, 1–2 jours): créer `src/` skeleton, config QC (phpstan/phpcs/phpunit), CI baseline.

@@ -15,27 +15,44 @@ if (!file_exists($coveragePath)) {
 
 try {
     $xml = new SimpleXMLElement(file_get_contents($coveragePath));
-    $metrics = $xml->xpath('//metrics[@type="statement"]');
 
-    if (empty($metrics)) {
-        fprintf(STDERR, "ERROR: No statement metrics found in coverage.xml\n");
-        exit(1);
-    }
+    // Prefer Clover project-level metrics (PHPUnit 10)
+    $projectMetrics = $xml->xpath('/coverage/project/metrics');
 
     $covered = 0;
-    $total = 0;
+    $total   = 0;
 
-    foreach ($metrics as $m) {
-        $covered += (int)$m['covered'];
-        $total += (int)$m['statements'];
+    if (!empty($projectMetrics)) {
+        $m = $projectMetrics[0];
+        // Attributes: statements, coveredstatements
+        $total   = (int)($m['statements'] ?? 0);
+        $covered = (int)($m['coveredstatements'] ?? 0);
+    } else {
+        // Fallback: sum class-level metrics if present
+        $classMetrics = $xml->xpath('//file/class/metrics');
+        if (!empty($classMetrics)) {
+            foreach ($classMetrics as $m) {
+                $total   += (int)($m['statements'] ?? 0);
+                $covered += (int)($m['coveredstatements'] ?? 0);
+            }
+        } else {
+            // Last resort: sum file-level metrics
+            $fileMetrics = $xml->xpath('//file/metrics');
+            if (!empty($fileMetrics)) {
+                foreach ($fileMetrics as $m) {
+                    $total   += (int)($m['statements'] ?? 0);
+                    $covered += (int)($m['coveredstatements'] ?? 0);
+                }
+            }
+        }
     }
 
     if ($total === 0) {
-        fprintf(STDERR, "ERROR: No statements found in coverage\n");
+        fprintf(STDERR, "ERROR: No statements found in coverage (parsed total=0)\n");
         exit(1);
     }
 
-    $coverage = ($covered / $total) * 100;
+    $coverage = $total > 0 ? ($covered / $total) * 100 : 0.0;
 
     printf("Coverage: %.2f%% (%d/%d statements)\n", $coverage, $covered, $total);
     printf("Threshold: %d%%\n", $threshold);

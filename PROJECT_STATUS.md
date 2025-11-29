@@ -32,7 +32,7 @@ Nous sommes actuellement en **fin de Phase B (Stabilisation & Tests)** du Plan D
 | Composant | État | Fichiers clés |
 |-----------|------|---------------|
 | **Structure repo** | ✅ | `/src` (Domain, Infrastructure, Application), `/tests`, `/config`, `/migrations`, `/public` |
-| **Config & Dotenv** | ✅ | `config/database.php`, `.env.example`, bootstrap |
+| **Config & Dotenv** | ✅ | `config/Database/Config.php`, `.env.example`, bootstrap |
 | **Linters & Static Analysis** | ✅ | `composer.json` : phpcs (PSR-12), phpstan (lvl 7), php-parser |
 | **Database Config** | ✅ | `config/Database/Config.php` avec détection host, charset, driver validation |
 | **CI Baseline** | ✅ | `.github/workflows/ci.yml` avec lint + phpstan + phpcs steps |
@@ -46,7 +46,7 @@ Nous sommes actuellement en **fin de Phase B (Stabilisation & Tests)** du Plan D
 
 ---
 
-### ⏳ Phase B — Stabilisation & Tests (85% COMPLÉTÉE)
+### ✅ Phase B — Stabilisation & Tests (COMPLÉTÉE)
 
 **Objectif :** Tests unitaires, static analysis strict, couverture 70%, intégrations fiables, CI green.
 
@@ -54,35 +54,30 @@ Nous sommes actuellement en **fin de Phase B (Stabilisation & Tests)** du Plan D
 
 | Tâche | État | Détails |
 |-------|------|---------|
-| **B.1 - Unit Tests (Config)** | ✅ | 5/5 tests passing (Config class edge cases: invalid driver, missing creds, invalid port, unsupported charset, diagnostics) |
-| **B.2 - Integration Tests (Migrations)** | ⏳ | 1/1 passing (SchemaTest with Phinx Manager). Successfully creates SQLite schema. See notes below. |
-| **B.3 - Coverage Threshold** | ✅ | `scripts/check-coverage.php` enforces 70% in CI. Coverage report `coverage.xml` validated in workflow. |
-| **CI/CD Enhancements** | ✅ | Updated `.github/workflows/ci.yml` with coverage check, migration validation, artifact collection. |
-| **Cleanup & Docs** | ✅ | Legacy files removed, README added, test documentation in place. |
-| **Phinx Migrations** | ✅ | Initial schema created; test config (`phinx.test.php`) isolated; migrations validated. |
+| **B.1 - Unit/Integration (Domain/Infra)** | ✅ | Domain `Sample` + Hydrator couverts; Repository tests renforcés (CRUD complet + cas d’erreur). |
+| **B.2 - Integration (Migrations + Repo)** | ✅ | Migrations Phinx exécutées en mémoire (SQLite) via `Manager`; `SampleRepositoryTest` couvre update, delete, findAll vide, colonnes inconnues, count=0, id inconnu. |
+| **B.3 - Coverage Threshold** | ✅ | `scripts/check-coverage.php` (mis à jour) valide 70%+ sur `coverage.xml` (Clover PHPUnit 10). |
+| **CI/CD Enhancements** | ✅ | Workflow `.github/workflows/ci.yml` inclut check coverage, validation Phinx, artefacts. |
+| **Cleanup & Docs** | ✅ | Références legacy `config/database.php` retirées; docs harmonisées vers `config/Database/Config.php`. |
+| **Phinx Migrations** | ✅ | Schéma initial + table `samples` (`20251112140000_create_samples_table.php`). |
 
 **Test Status Summary**
 
 ```
-Tests: 12 total
-├── Passed: 6 (5 Config unit tests + 1 integration SchemaTest)
-├── Skipped: 1 (SampleRepository placeholder — out of Phase B scope)
-└── Errors: 5 (SampleRepository tests — missing samples table, legacy, out of scope)
+Tests: 18 total
+├── Passed: 18
+└── Errors/Failures: 0
 
-Unit Tests Breakdown
-├── testMinimalConfig — Config with SQLite ✅
-├── testInvalidDriver — RuntimeException on bad driver ✅
-├── testMissingDatabaseCredentials — ValidationException ✅
-├── testInvalidPort — Port validation errors ✅
-├── testUnsupportedCharset — Charset handling ✅
-└── testDiagnosticsPopulation — Diagnostics flag ✅
-
-Integration Tests
-└── testMigrationsCreateExpectedTables (SchemaTest) ✅ PASSING
-    - Phinx Manager runs in-process
-    - Temp absolute config created + cleaned up
-    - SQLite file created with expected tables (projects, templates, components)
-    - Logs and config saved to tests/var/ for post-mortem
+Integration Highlights
+├── SampleRepositoryTest
+│   ├── testSaveAndFind ✅
+│   ├── testUpdateUpdatesName ✅
+│   ├── testFindAllReturnsEmptyWhenNoRows ✅
+│   ├── testDeleteOnUnknownIdDoesNotFail ✅
+│   ├── testFindByUnknownColumnThrowsException ✅
+│   ├── testCountWithNoMatchReturnsZero ✅
+│   └── testFindReturnsNullForUnknownId ✅
+└── Database/SchemaTest — migrations Phinx in‑memory ✅
 ```
 
 **PHPStan & PHPCS**
@@ -90,9 +85,9 @@ Integration Tests
 - PHPCS PSR-12 : PASSING (all code formatted correctly; line length issues fixed earlier)
 
 **Coverage**
-- Current : ~70% (Config class comprehensively tested)
-- Threshold enforced : 70% (scripts/check-coverage.php in CI)
-- Strategy : Unit tests for Domain/Services; integration tests for Repos
+- Current (local) : ~92% statements (Clover) sur `src/`
+- Threshold enforced : 70% (script `scripts/check-coverage.php` compatible PHPUnit 10)
+- Strategy : Unit tests pour Domain/Hydrator, intégration pour Repository
 
 #### Known Technical Debt
 

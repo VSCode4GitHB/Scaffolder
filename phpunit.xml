@@ -16,6 +16,10 @@
     <include>
       <directory suffix=".php">src</directory>
     </include>
+    <exclude>
+      <file>src/bootstrap.php</file>
+      <file>src/Config/Environment.php</file>
+    </exclude>
   </coverage>
   <php>
     <env name="APP_ENV" value="testing"/>

@@ -60,6 +60,23 @@ final class SampleRepositoryTest extends TestCase
         $this->assertSame('Test Entity', $found->getName());
     }
 
+    public function testUpdateUpdatesName(): void
+    {
+        // Insert initial entity
+        $inserted = $this->repository->save(new Sample(0, 'Before'));
+
+        // Update same id with a different name
+        $updated = $this->repository->save(new Sample($inserted->getId(), 'After'));
+
+        $this->assertSame($inserted->getId(), $updated->getId());
+        $this->assertSame('After', $updated->getName());
+
+        // Verify persisted change
+        $found = $this->repository->find($inserted->getId());
+        $this->assertNotNull($found);
+        $this->assertSame('After', $found->getName());
+    }
+
     public function testFindAll(): void
     {
         // Create few samples
@@ -71,6 +88,13 @@ final class SampleRepositoryTest extends TestCase
         $this->assertContainsOnlyInstancesOf(Sample::class, $all);
     }
 
+    public function testFindAllReturnsEmptyWhenNoRows(): void
+    {
+        $all = $this->repository->findAll();
+        $this->assertIsArray($all);
+        $this->assertCount(0, $all);
+    }
+
     public function testDelete(): void
     {
         $sample = new Sample(0, 'To Delete');
@@ -80,6 +104,14 @@ final class SampleRepositoryTest extends TestCase
         
         $found = $this->repository->find($saved->getId());
         $this->assertNull($found);
+    }
+
+    public function testDeleteOnUnknownIdDoesNotFail(): void
+    {
+        $this->assertSame(0, $this->repository->count());
+        // Deleting a non-existent id should not throw
+        $this->repository->delete(new Sample(123456, 'ghost'));
+        $this->assertSame(0, $this->repository->count());
     }
 
     public function testFindBy(): void
@@ -95,6 +127,12 @@ final class SampleRepositoryTest extends TestCase
         }
     }
 
+    public function testFindByUnknownColumnThrowsException(): void
+    {
+        $this->expectException(\PDOException::class);
+        $this->repository->findBy(['unknown' => 'x']);
+    }
+
     public function testCount(): void
     {
         $this->repository->save(new Sample(0, 'One'));
@@ -102,5 +140,17 @@ final class SampleRepositoryTest extends TestCase
 
         $this->assertSame(2, $this->repository->count());
         $this->assertSame(1, $this->repository->count(['name' => 'One']));
+    }
+
+    public function testCountWithNoMatchReturnsZero(): void
+    {
+        $this->repository->save(new Sample(0, 'One'));
+        $this->repository->save(new Sample(0, 'Two'));
+        $this->assertSame(0, $this->repository->count(['name' => 'Absent']));
+    }
+
+    public function testFindReturnsNullForUnknownId(): void
+    {
+        $this->assertNull($this->repository->find(999999));
     }
 }

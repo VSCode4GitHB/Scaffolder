@@ -47,10 +47,28 @@ vendor\bin\phinx migrate -c phinx.php -e test
 vendor\bin\phpunit --colors=never
 ```
 
+Tests avec couverture (local)
+
+Pour générer le rapport de couverture et vérifier le seuil (≥ 70%), activez Xdebug coverage puis lancez le script Composer.
+
+- PowerShell (Windows):
+
+```powershell
+$env:XDEBUG_MODE = 'coverage'; composer test:coverage
+```
+
+- Bash (Linux/macOS):
+
+```bash
+XDEBUG_MODE=coverage composer test:coverage
+```
+
+Le rapport Clover est écrit dans `coverage.xml` et validé par `scripts/check-coverage.php` (seuil 70%).
+
 Regénérer la documentation minimale (timestamp) :
 
 ```powershell
 composer run docs:update
 ```
 
-Dernière mise à jour : 2025-11-12T13:00:05+00:00
+Dernière mise à jour : 2025-11-28T23:06:00+00:00
