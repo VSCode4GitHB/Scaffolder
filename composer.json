@@ -24,6 +24,11 @@
     "log:finish": "php bin/log_progress.php finish",
     "log:rotate": "php scripts/rotate_logs.php"
   },
+  "config": {
+    "platform": {
+      "php": "8.1.0"
+    }
+  },
   "require-dev": {
     "phpunit/phpunit": "^10.0",
     "phpstan/phpstan": "^1.12",

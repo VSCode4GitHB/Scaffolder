@@ -9,6 +9,12 @@ This README explains how to use it, how to run local checks (PHPStan/PHPCS/PHPUn
 
 ---
 
+## Prerequisites (compatibilité PHP)
+
+- PHP 8.1+ (baseline prise en charge). Le projet est conçu pour fonctionner sous PHP 8.1 et versions ultérieures (8.2/8.3+).
+- Dépendances figées pour PHP 8.1 via Composer : le fichier `composer.json` contient `config.platform.php = 8.1.0` afin d’assurer une résolution reproductible compatible 8.1, quel que soit le PHP installé localement.
+- Conséquence : un unique `composer.lock` fonctionne en CI PHP 8.1 et 8.3 (tant que les dépendances respectent la contrainte minimale 8.1).
+
 ## How to use `Config\Database\Config`
 
 The class exposes a ready PDO connection on instantiation and a diagnostics array:

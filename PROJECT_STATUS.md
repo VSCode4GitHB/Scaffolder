@@ -40,7 +40,8 @@ Nous sommes actuellement en **fin de Phase B (Stabilisation & Tests)** du Plan D
 | **Docker** | ✅ | `docker-compose.yml`, `docker/php/Dockerfile` |
 
 **Notes :**
-- PHP 8.3, PSR-12 enforced, strict_types everywhere.
+- PHP 8.1+ (tests CI sur 8.1/8.2/8.3), PSR-12 enforced, strict_types everywhere.
+- Résolution Composer figée sur plateforme PHP 8.1 via `config.platform.php = 8.1.0` pour garantir la reproductibilité du `composer.lock`.
 - Database Config class fully functional, supports SQLite/MySQL/PostgreSQL auto-detection.
 - Phinx 0.14 configured; migrations working on MySQL, SQLite test support requires special handling.
 

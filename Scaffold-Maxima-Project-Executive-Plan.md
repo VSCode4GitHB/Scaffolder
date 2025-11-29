@@ -3,6 +3,16 @@
 Donner à ton scaffold un cadre professionnel implique de transformer le script isolé en une application modulaire, testable et déployable : code propre, séparation claire des responsabilités, pipelines automatisés, sécurité et observabilité intégrées, interface d’administration (dashboard) réactive et accessible. Ci‑dessous un plan opérationnel, priorisé et détaillé pour passer de l’outil de génération à une plateforme complète de gestion/monitoring.
 
 ---
+
+### Compatibilité PHP et dépendances (politique de base)
+
+- Baseline du projet : PHP 8.1 ou plus (8.1+). Le code est écrit pour fonctionner à minima en 8.1 et reste compatible avec 8.2/8.3+.
+- Résolution Composer figée : `composer.json` contient `config.platform.php = 8.1.0` afin d’assurer un `composer.lock` reproductible et compatible 8.1, même si des développeurs utilisent PHP 8.2/8.3 localement.
+- CI multi-versions : le workflow `.github/workflows/ci.yml` exécute l’installation et les tests sur au moins PHP 8.1 et 8.3 (8.2 inclus également), sans `--ignore-platform-req`.
+- Docker : l’image par défaut utilise PHP 8.2, mais la version peut être surchargée via l’argument de build `PHP_VERSION` (par ex. `PHP_VERSION=8.1`). Cette configuration reste cohérente avec l’objectif « 8.1+ ».
+- Procédure en cas de modification des dépendances : exécuter `composer update --with-all-dependencies`, puis commiter le nouveau `composer.lock`.
+
+---
 ## Les fichiers de base
 * **Scaffold (fichier principal):** `./bin/scaffold_v2.php`
 ```PHP
